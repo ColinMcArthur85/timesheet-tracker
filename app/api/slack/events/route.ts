@@ -14,29 +14,18 @@ async function verifySlackSignature(
   const timestamp = request.headers.get('x-slack-request-timestamp');
   const signature = request.headers.get('x-slack-signature');
 
+  // Slack's url_verification does NOT send signatures
   if (!timestamp || !signature) {
-    // Skip verification if headers missing (for dev/testing)
-    if (!SLACK_SIGNING_SECRET || SLACK_SIGNING_SECRET === 'your-signing-secret') {
-      console.log('⚠️ Skipping signature verification (dev mode)');
-      return true;
-    }
-    return false;
-  }
-
-  // Skip verification if using placeholder
-  if (SLACK_SIGNING_SECRET === 'your-signing-secret') {
-    console.log('⚠️ Using placeholder signing secret, skipping verification');
+    console.log('Skipping signature verification (Slack challenge or dev mode)');
     return true;
   }
 
-  // Check timestamp is recent (within 5 minutes)
   const currentTime = Math.floor(Date.now() / 1000);
   if (Math.abs(currentTime - parseInt(timestamp)) > 60 * 5) {
-    console.log('❌ Request too old');
+    console.log('Request too old');
     return false;
   }
 
-  // Verify signature
   const sigBasestring = `v0:${timestamp}:${body}`;
   const mySignature =
     'v0=' +
@@ -45,32 +34,26 @@ async function verifySlackSignature(
       .update(sigBasestring)
       .digest('hex');
 
-  const isValid = crypto.timingSafeEqual(
+  return crypto.timingSafeEqual(
     Buffer.from(mySignature),
     Buffer.from(signature)
   );
-
-  if (!isValid) {
-    console.log('❌ Signature mismatch');
-  }
-
-  return isValid;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.text();
-    const isValid = await verifySlackSignature(request, body);
+    const rawBody = await request.text();
+    const data: SlackEvent = JSON.parse(rawBody);
 
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-    }
-
-    const data: SlackEvent = JSON.parse(body);
-
-    // URL Verification challenge
+    // 1️⃣ Handle Slack URL verification BEFORE signature checks
     if (data.type === 'url_verification') {
       return NextResponse.json({ challenge: data.challenge });
+    }
+
+    // 2️⃣ Now validate signature for actual events
+    const isValid = await verifySlackSignature(request, rawBody);
+    if (!isValid) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
     const event = data.event;
@@ -78,29 +61,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 'no_event' });
     }
 
-    // Ignore bot messages or other types
+    // Ignore non-user messages
     if (event.type !== 'message' || event.subtype) {
       return NextResponse.json({ status: 'ignored' });
     }
 
     // Check channel
     if (SLACK_PUNCH_CHANNEL && event.channel !== SLACK_PUNCH_CHANNEL) {
-      console.log(
-        `Ignored event from channel ${event.channel} (expected ${SLACK_PUNCH_CHANNEL})`
-      );
       return NextResponse.json({ status: 'wrong_channel' });
     }
-
-    console.log(`Processing event from channel ${event.channel}: ${event.text}`);
 
     const text = event.text.trim().toUpperCase();
     let eventType: 'IN' | 'OUT' | null = null;
 
-    if (text.startsWith('IN')) {
-      eventType = 'IN';
-    } else if (text.startsWith('OUT')) {
-      eventType = 'OUT';
-    }
+    if (text.startsWith('IN')) eventType = 'IN';
+    if (text.startsWith('OUT')) eventType = 'OUT';
 
     if (eventType) {
       const timestamp = parseSlackTimestamp(event.ts);
@@ -111,16 +86,13 @@ export async function POST(request: NextRequest) {
         event.client_msg_id || event.ts,
         text
       );
-      console.log(`✅ Recorded ${eventType} at ${timestamp.toISOString()}`);
+
       return NextResponse.json({ status: 'recorded', type: eventType });
     }
 
     return NextResponse.json({ status: 'no_action' });
   } catch (error) {
-    console.error('Error processing Slack event:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Slack handler error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
