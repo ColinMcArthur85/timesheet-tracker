@@ -89,3 +89,24 @@ export async function deletePunchEvent(slackEventId: string) {
   `;
   return result.rows[0];
 }
+
+// --- Manual Punch Management ---
+
+export async function updatePunchById(id: number, timestamp: Date) {
+  const result = await sql`
+    UPDATE punch_events
+    SET timestamp = ${timestamp.toISOString()}
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return result.rows[0];
+}
+
+export async function deletePunchById(id: number) {
+  const result = await sql`
+    DELETE FROM punch_events
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return result.rows[0];
+}

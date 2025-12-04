@@ -23,7 +23,9 @@ export function processPunches(punches: PunchEvent[]): ProcessedSession[] {
         sessions.push({
           date: new Date(currentIn.timestamp),
           punch_in: new Date(currentIn.timestamp),
+          punch_in_id: currentIn.id,
           punch_out: null,
+          punch_out_id: null,
           duration_minutes: 0,
           notes: 'Missing OUT punch',
         });
@@ -38,7 +40,9 @@ export function processPunches(punches: PunchEvent[]): ProcessedSession[] {
         sessions.push({
           date: new Date(currentIn.timestamp),
           punch_in: new Date(currentIn.timestamp),
+          punch_in_id: currentIn.id,
           punch_out: new Date(punch.timestamp),
+          punch_out_id: punch.id,
           duration_minutes: Math.floor(duration),
           notes: null,
         });
@@ -49,12 +53,16 @@ export function processPunches(punches: PunchEvent[]): ProcessedSession[] {
   }
 
   if (currentIn) {
-    // Trailing IN
+    // Trailing IN - calculate duration from punch in to now
+    const now = new Date();
+    const duration = (now.getTime() - new Date(currentIn.timestamp).getTime()) / (1000 * 60);
     sessions.push({
       date: new Date(currentIn.timestamp),
       punch_in: new Date(currentIn.timestamp),
+      punch_in_id: currentIn.id,
       punch_out: null,
-      duration_minutes: 0,
+      punch_out_id: null,
+      duration_minutes: Math.floor(duration),
       notes: 'Open session',
     });
   }

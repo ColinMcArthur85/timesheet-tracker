@@ -20,7 +20,9 @@ export interface WorkSession {
 export interface ProcessedSession {
   date: Date;
   punch_in: Date | null;
+  punch_in_id: number | null;
   punch_out: Date | null;
+  punch_out_id: number | null;
   duration_minutes: number;
   notes: string | null;
 }

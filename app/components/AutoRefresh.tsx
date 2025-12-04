@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AutoRefreshProps {
@@ -10,9 +10,10 @@ interface AutoRefreshProps {
 export default function AutoRefresh({ initialLastPunchId }: AutoRefreshProps) {
   const router = useRouter();
   const [currentLastPunchId, setCurrentLastPunchId] = useState(initialLastPunchId);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(async () => {
+    const pollStatus = async () => {
       try {
         const response = await fetch('/api/status');
         const data = await response.json();
@@ -25,9 +26,42 @@ export default function AutoRefresh({ initialLastPunchId }: AutoRefreshProps) {
       } catch (error) {
         console.error('Error polling status:', error);
       }
-    }, 5000); // Poll every 5 seconds
+    };
 
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      // Poll immediately on mount
+      pollStatus();
+      // Then poll every 30 seconds (reduced from 5 seconds)
+      intervalRef.current = setInterval(pollStatus, 30000);
+    };
+
+    const stopPolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    // Start polling
+    startPolling();
+
+    // Pause polling when tab is hidden to save resources
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('Tab hidden - pausing auto-refresh');
+        stopPolling();
+      } else {
+        console.log('Tab visible - resuming auto-refresh');
+        startPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [currentLastPunchId, router]);
 
   return null; // This component doesn't render anything
