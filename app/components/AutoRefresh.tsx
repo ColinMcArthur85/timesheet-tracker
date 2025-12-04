@@ -17,7 +17,7 @@ export default function AutoRefresh({ initialLastPunchId }: AutoRefreshProps) {
         const response = await fetch('/api/status');
         const data = await response.json();
 
-        if (data.last_punch_id > currentLastPunchId) {
+        if (data.last_punch_id !== currentLastPunchId) {
           console.log('New punch detected! Refreshing...');
           router.refresh();
           setCurrentLastPunchId(data.last_punch_id);

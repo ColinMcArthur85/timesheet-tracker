@@ -12,6 +12,13 @@ export function processPunches(punches: PunchEvent[]): ProcessedSession[] {
   for (const punch of sortedPunches) {
     if (punch.event_type === 'IN') {
       if (currentIn) {
+        // Check for rapid-fire duplicates (within 5 minutes)
+        const timeDiff = new Date(punch.timestamp).getTime() - new Date(currentIn.timestamp).getTime();
+        if (timeDiff < 5 * 60 * 1000) {
+          // Ignore duplicate IN within 5 mins
+          continue;
+        }
+
         // Missing OUT for previous IN
         sessions.push({
           date: new Date(currentIn.timestamp),

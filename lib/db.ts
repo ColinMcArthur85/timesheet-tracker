@@ -66,3 +66,26 @@ export async function getLastPunchEvent() {
   `;
   return result.rows[0] || null;
 }
+
+export async function updatePunchEvent(
+  slackEventId: string,
+  eventType: 'IN' | 'OUT',
+  rawMessage: string
+) {
+  const result = await sql`
+    UPDATE punch_events
+    SET event_type = ${eventType}, raw_message = ${rawMessage}
+    WHERE slack_event_id = ${slackEventId}
+    RETURNING *
+  `;
+  return result.rows[0];
+}
+
+export async function deletePunchEvent(slackEventId: string) {
+  const result = await sql`
+    DELETE FROM punch_events
+    WHERE slack_event_id = ${slackEventId}
+    RETURNING *
+  `;
+  return result.rows[0];
+}

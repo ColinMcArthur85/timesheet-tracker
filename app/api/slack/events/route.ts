@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { createPunchEvent } from '@/lib/db';
+import { createPunchEvent, updatePunchEvent, deletePunchEvent } from '@/lib/db';
 import { parseSlackTimestamp } from '@/lib/time-utils';
 import { SlackEvent } from '@/lib/types';
 
@@ -68,15 +68,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    const event = data.event;
+    const event = data.event as any;
     if (!event) {
       console.log('🤷‍♂️ No event found in body');
       return NextResponse.json({ status: 'no_event' });
     }
 
-    // Ignore non-user messages
-    if (event.type !== 'message' || event.subtype) {
-      console.log(`Example: Ignored event type: ${event.type}, subtype: ${event.subtype}`);
+    // Ignore non-message events
+    if (event.type !== 'message') {
+      console.log(`Example: Ignored event type: ${event.type}`);
+      return NextResponse.json({ status: 'ignored' });
+    }
+
+    // Allow 'message_changed' and 'message_deleted' subtypes, ignore others
+    if (event.subtype && event.subtype !== 'message_changed' && event.subtype !== 'message_deleted') {
+      console.log(`Example: Ignored subtype: ${event.subtype}`);
       return NextResponse.json({ status: 'ignored' });
     }
 
@@ -87,27 +93,71 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: 'wrong_channel' });
     }
 
-    const text = event.text.trim().toUpperCase();
+    // Handle DELETION
+    if (event.subtype === 'message_deleted') {
+      const deletedTs = event.previous_message?.ts || event.deleted_ts;
+      console.log(`🗑️ Message deleted: ${deletedTs}`);
+      if (deletedTs) {
+        await deletePunchEvent(deletedTs);
+      }
+      return NextResponse.json({ status: 'deleted' });
+    }
+
+    // Handle EDIT or NEW message
+    let text = '';
+    let ts = '';
+    let user = '';
+
+    if (event.subtype === 'message_changed') {
+      text = event.message.text.trim();
+      ts = event.message.ts; // The original message timestamp
+      user = event.message.user;
+    } else {
+      text = event.text.trim();
+      ts = event.ts;
+      user = event.user;
+    }
+
     console.log(`💬 Processing text: "${text}"`);
     
     let eventType: 'IN' | 'OUT' | null = null;
 
-    if (text.startsWith('IN')) eventType = 'IN';
-    if (text.startsWith('OUT')) eventType = 'OUT';
+    // Use Regex for case-insensitive matching with word boundaries
+    // Matches: "In", "IN", "in", "In!", "In."
+    if (/^in\b/i.test(text)) eventType = 'IN';
+    if (/^out\b/i.test(text)) eventType = 'OUT';
 
     if (eventType) {
-      console.log(`✅ Detected punch ${eventType}! Saving to DB...`);
-      const timestamp = parseSlackTimestamp(event.ts);
-      await createPunchEvent(
-        event.user,
-        eventType,
-        timestamp,
-        event.client_msg_id || event.ts,
-        text
-      );
+      const timestamp = parseSlackTimestamp(ts);
+      
+      if (event.subtype === 'message_changed') {
+        console.log(`🔄 Updating punch to ${eventType}...`);
+        const updated = await updatePunchEvent(ts, eventType, text);
+        if (!updated) {
+          // If it wasn't a punch before, create it now
+          console.log('   Punch did not exist, creating new...');
+          await createPunchEvent(user, eventType, timestamp, ts, text);
+        }
+      } else {
+        console.log(`✅ Detected punch ${eventType}! Saving to DB...`);
+        // Use ts as the ID (instead of client_msg_id) for consistency with edits
+        await createPunchEvent(
+          user,
+          eventType,
+          timestamp,
+          ts,
+          text
+        );
+      }
       console.log('💾 Saved successfully!');
-
       return NextResponse.json({ status: 'recorded', type: eventType });
+    } else {
+      // If it's an edit and the new text is NOT a punch, delete the old punch if it existed
+      if (event.subtype === 'message_changed') {
+        console.log('🔄 Edit detected, but no longer a punch. Deleting if exists...');
+        await deletePunchEvent(ts);
+        return NextResponse.json({ status: 'removed_punch' });
+      }
     }
 
     console.log('😴 No punch command detected');
