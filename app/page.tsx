@@ -6,6 +6,7 @@ import { startOfMonth } from 'date-fns';
 import AutoRefresh from './components/AutoRefresh';
 import SessionList from './components/SessionList';
 import PayPeriodList from './components/PayPeriodList';
+import EndDayButton from './components/EndDayButton';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -90,6 +91,10 @@ export default async function Home() {
             Today&apos;s Activity
           </h2>
           <SessionList sessions={todaySessions} totalMinutes={todayTotalMinutes} />
+          <EndDayButton 
+            isClockedIn={isClockedIn} 
+            totalHours={todayTotalMinutes / 60} 
+          />
         </div>
 
         {/* Pay Period Stats */}
