@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatTime } from '@/lib/time-utils';
 import EditSessionModal from './EditSessionModal';
 import AddPunchModal from './AddPunchModal';
@@ -9,20 +10,55 @@ import LiveDuration from './LiveDuration';
 interface SessionListProps {
   sessions: any[];
   totalMinutes: number;
-  initialDate?: Date;
+  initialDate?: Date | string;
   onUpdate?: () => void;
 }
 
 export default function SessionList({ sessions, totalMinutes, initialDate, onUpdate }: SessionListProps) {
+  const router = useRouter();
   const [editingSession, setEditingSession] = useState<any>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null);
+
+  const handleDeleteSession = async (session: any) => {
+    if (!confirm('Delete this entire session? This will remove both punch in and punch out.')) {
+      return;
+    }
+
+    setDeletingSessionId(session.punch_in_id);
+    try {
+      // Delete punch in
+      if (session.punch_in_id) {
+        const res = await fetch(`/api/punches/${session.punch_in_id}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Failed to delete punch in');
+      }
+
+      // Delete punch out if it exists
+      if (session.punch_out_id) {
+        const res = await fetch(`/api/punches/${session.punch_out_id}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error('Failed to delete punch out');
+      }
+
+      router.refresh();
+      onUpdate?.();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to delete session');
+    } finally {
+      setDeletingSessionId(null);
+    }
+  };
 
   return (
     <div>
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="text-sm bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full hover:bg-indigo-100 font-medium transition-colors"
+          className="text-sm bg-primary bg-opacity-10 text-white px-3 py-1 rounded-full hover:bg-opacity-20 font-medium transition-colors"
         >
           + Add Punch
         </button>
@@ -31,41 +67,50 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="text-left text-sm text-gray-600 border-b border-gray-200">
+            <tr className="text-left text-sm text-muted-foreground border-b border-border">
               <th className="pb-3 font-semibold">In</th>
               <th className="pb-3 font-semibold">Out</th>
               <th className="pb-3 font-semibold">Duration</th>
               <th className="pb-3 font-semibold">Notes</th>
-              <th className="pb-3 font-semibold w-10"></th>
+              <th className="pb-3 font-semibold w-32"></th>
             </tr>
           </thead>
           <tbody>
             {sessions.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-4 text-center text-gray-500">
+                <td colSpan={5} className="py-4 text-center text-muted-foreground">
                   No activity today
                 </td>
               </tr>
             ) : (
               sessions.map((session, idx) => (
-                <tr key={idx} className="border-b border-gray-100 last:border-0 group">
-                  <td className="py-3">{formatTime(session.punch_in)}</td>
-                  <td className="py-3">{formatTime(session.punch_out)}</td>
-                  <td className="py-3">
+                <tr key={idx} className="border-b border-border last:border-0 group">
+                  <td className="py-3 text-foreground">{formatTime(session.punch_in)}</td>
+                  <td className="py-3 text-foreground">{formatTime(session.punch_out)}</td>
+                  <td className="py-3 text-foreground">
                     {session.punch_out ? (
                       `${session.duration_minutes}m`
                     ) : (
                       <LiveDuration punchInTime={session.punch_in} />
                     )}
                   </td>
-                  <td className="py-3 text-gray-500">{session.notes || '-'}</td>
+                  <td className="py-3 text-muted-foreground">{session.notes || '-'}</td>
                   <td className="py-3 text-right">
-                    <button
-                      onClick={() => setEditingSession(session)}
-                      className="text-indigo-600 hover:text-indigo-400 text-sm font-medium transition-colors"
-                    >
-                      Edit
-                    </button>
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => setEditingSession(session)}
+                        className="text-primary hover:opacity-80 text-sm font-medium transition-opacity"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSession(session)}
+                        disabled={deletingSessionId === session.punch_in_id}
+                        className="text-destructive hover:opacity-80 text-sm font-medium transition-opacity disabled:opacity-50"
+                      >
+                        {deletingSessionId === session.punch_in_id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -73,7 +118,7 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
           </tbody>
         </table>
       </div>
-      <div className="mt-4 text-right font-semibold">
+      <div className="mt-4 text-right font-semibold text-foreground">
         Total Today: {(totalMinutes / 60).toFixed(2)} hrs
       </div>
 

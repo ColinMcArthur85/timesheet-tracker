@@ -2,10 +2,10 @@ import { getPunchEventsByDateRange, getLastPunchEvent } from '@/lib/db';
 import { processPunches } from '@/lib/punch-processor';
 import { calculatePayPeriodStats, organizeSessionsByDay } from '@/lib/pay-period';
 import { getStartOfDay, getEndOfDay, formatFullDate, formatTime, formatDuration, formatDate } from '@/lib/time-utils';
-import { startOfMonth } from 'date-fns';
+import { getPayPeriodForDate } from '@/lib/pay-period-utils';
 import AutoRefresh from './components/AutoRefresh';
 import SessionList from './components/SessionList';
-import PayPeriodList from './components/PayPeriodList';
+import PayPeriodSection from './components/PayPeriodSection';
 import EndDayButton from './components/EndDayButton';
 
 export const dynamic = 'force-dynamic';
@@ -32,9 +32,10 @@ export default async function Home() {
     lastPunch = formatTime(new Date(lastEvent.timestamp));
   }
 
-  // Get pay period stats (Current Month)
-  const ppStart = startOfMonth(today);
-  const ppEnd = today;
+  // Get pay period stats (Current pay period: 1st-14th or 15th-end of month)
+  const currentPayPeriod = getPayPeriodForDate(today);
+  const ppStart = currentPayPeriod.start;
+  const ppEnd = currentPayPeriod.end;
   const ppStartDay = getStartOfDay(ppStart);
   const ppEndDay = getEndOfDay(ppEnd);
 
@@ -54,7 +55,7 @@ export default async function Home() {
   const lastPunchId = latestEvent?.id || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-muted py-8 px-4">
       <AutoRefresh initialLastPunchId={lastPunchId} />
       
       <div className="max-w-4xl mx-auto">
@@ -64,7 +65,7 @@ export default async function Home() {
         </header>
 
         {/* Current Status */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-card rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">
             Current Status
           </h2>
@@ -85,8 +86,7 @@ export default async function Home() {
         </div>
 
         {/* Today's Activity */}
-        {/* Today's Activity */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-card rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">
             Today&apos;s Activity
           </h2>
@@ -97,40 +97,12 @@ export default async function Home() {
           />
         </div>
 
-        {/* Pay Period Stats */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">
-            Pay Period Stats
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-indigo-600">
-                {periodStats.total_hours.toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">Total Hours</div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-indigo-600">
-                {periodStats.potential_hours.toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">Potential Hours</div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div
-                className={`text-3xl font-bold ${
-                  periodStats.difference >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {periodStats.difference.toFixed(2)}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">Difference</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pay Period History */}
-        <PayPeriodList days={payPeriodDays} />
+        {/* Pay Period Stats and Summary */}
+        <PayPeriodSection
+          initialPeriod={currentPayPeriod}
+          initialStats={periodStats}
+          initialDays={payPeriodDays}
+        />
       </div>
     </div>
   );

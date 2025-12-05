@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:clean": "pkill -f 'next dev' || true && rm -f .next/dev/lock && npm run dev"
   },
   "dependencies": {
     "@vercel/postgres": "^0.10.0",

@@ -5,45 +5,43 @@
   --background: #181818; /* sideBar.background */
   --card: #1f1f1f; /* editor.background */
   --foreground: #cccccc; /* editor.foreground */
-  
   --muted: #2b2b2b; /* textBlockQuote.background */
   --muted-foreground: #9d9d9d; /* descriptionForeground */
-  
   --border: #2b2b2b; /* panel.border */
-  
   --primary: #0078d4; /* button.background */
   --primary-foreground: #ffffff;
-  
   --destructive: #f85149; /* errorForeground */
-  
   --success: #2ea043; /* editorGutter.addedBackground */
   --success-bg: #2ea04326; /* ~15% opacity */
 }
 
 @theme inline {
-  /* Backgrounds */
+  /* Core Theme Colors */
+  --color-background: var(--background);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  
+  /* Legacy/Alias Colors for existing usage */
   --color-gray-50: var(--background);
-  --color-white: var(--card);
   --color-gray-100: var(--muted);
-  
-  /* Text */
-  --color-gray-900: var(--foreground);
-  --color-gray-800: var(--foreground);
-  --color-gray-600: var(--muted-foreground);
-  --color-gray-500: var(--muted-foreground);
-  
-  /* Borders */
   --color-gray-200: var(--border);
-  
-  /* Brand */
+  --color-gray-500: var(--muted-foreground);
+  --color-gray-600: var(--muted-foreground);
+  --color-gray-800: var(--foreground);
+  --color-gray-900: var(--foreground);
+  --color-white: var(--primary-foreground);
   --color-indigo-600: var(--primary);
-  
-  /* Status - Green */
   --color-green-100: var(--success-bg);
-  --color-green-800: var(--success);
   --color-green-600: var(--success);
-  
-  /* Status - Red */
+  --color-green-800: var(--success);
   --color-red-600: var(--destructive);
 }
 

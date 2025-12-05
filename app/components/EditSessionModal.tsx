@@ -19,6 +19,7 @@ export default function EditSessionModal({ isOpen, onClose, session }: EditSessi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [punchInValue, setPunchInValue] = useState('');
   const [punchOutValue, setPunchOutValue] = useState('');
+  const [addingPunchOut, setAddingPunchOut] = useState(false);
 
   // Helper to format Date object to "YYYY-MM-DDTHH:mm" for datetime-local input
   const toLocalISOString = (date: Date) => {
@@ -36,8 +37,17 @@ export default function EditSessionModal({ isOpen, onClose, session }: EditSessi
     }
     if (session?.punch_out) {
       setPunchOutValue(toLocalISOString(new Date(session.punch_out)));
+      setAddingPunchOut(false);
     } else {
-      setPunchOutValue('');
+      // Default punch out to 8 hours after punch in
+      if (session?.punch_in) {
+        const punchOutDefault = new Date(session.punch_in);
+        punchOutDefault.setHours(punchOutDefault.getHours() + 8);
+        setPunchOutValue(toLocalISOString(punchOutDefault));
+      } else {
+        setPunchOutValue('');
+      }
+      setAddingPunchOut(false);
     }
   }, [session]);
 
@@ -56,7 +66,7 @@ export default function EditSessionModal({ isOpen, onClose, session }: EditSessi
         if (!res.ok) throw new Error('Failed to update punch in');
       }
 
-      // Update punch out if it exists and value changed
+      // Update punch out if it exists
       if (session.punch_out_id && punchOutValue) {
         const res = await fetch(`/api/punches/${session.punch_out_id}`, {
           method: 'PUT',
@@ -64,6 +74,19 @@ export default function EditSessionModal({ isOpen, onClose, session }: EditSessi
           body: JSON.stringify({ timestamp: new Date(punchOutValue).toISOString() }),
         });
         if (!res.ok) throw new Error('Failed to update punch out');
+      }
+      
+      // Add new punch out if user is adding one
+      if (!session.punch_out_id && addingPunchOut && punchOutValue) {
+        const res = await fetch('/api/punches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventType: 'OUT',
+            timestamp: new Date(punchOutValue).toISOString(),
+          }),
+        });
+        if (!res.ok) throw new Error('Failed to create punch out');
       }
 
       router.refresh();
@@ -96,19 +119,19 @@ export default function EditSessionModal({ isOpen, onClose, session }: EditSessi
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Edit Session</h2>
+      <div className="bg-card rounded-lg p-6 w-full max-w-md border border-border">
+        <h2 className="text-xl font-bold mb-4 text-foreground">Edit Session</h2>
         
         {/* Punch In */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-900 mb-1">Punch In</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Punch In</label>
           {session.punch_in && session.punch_in_id ? (
             <div className="flex gap-2">
               <input
                 type="datetime-local"
                 value={punchInValue}
                 onChange={(e) => setPunchInValue(e.target.value)}
-                className="flex-1 border rounded px-3 py-2"
+                className="flex-1 border border-border bg-muted text-foreground rounded px-3 py-2"
               />
               <button
                 onClick={() => handleDelete(session.punch_in_id!, 'in')}
@@ -119,20 +142,20 @@ export default function EditSessionModal({ isOpen, onClose, session }: EditSessi
               </button>
             </div>
           ) : (
-            <span className="text-gray-400 italic">No IN punch</span>
+            <span className="text-muted-foreground italic">No IN punch</span>
           )}
         </div>
 
         {/* Punch Out */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-900 mb-1">Punch Out</label>
+          <label className="block text-sm font-medium text-foreground mb-1">Punch Out</label>
           {session.punch_out && session.punch_out_id ? (
             <div className="flex gap-2">
               <input
                 type="datetime-local"
                 value={punchOutValue}
                 onChange={(e) => setPunchOutValue(e.target.value)}
-                className="flex-1 border rounded px-3 py-2"
+                className="flex-1 border border-border bg-muted text-foreground rounded px-3 py-2"
               />
               <button
                 onClick={() => handleDelete(session.punch_out_id!, 'out')}
@@ -142,22 +165,45 @@ export default function EditSessionModal({ isOpen, onClose, session }: EditSessi
                 Delete
               </button>
             </div>
+          ) : addingPunchOut ? (
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={punchOutValue}
+                onChange={(e) => setPunchOutValue(e.target.value)}
+                className="flex-1 border border-border bg-muted text-foreground rounded px-3 py-2"
+              />
+              <button
+                onClick={() => setAddingPunchOut(false)}
+                className="text-muted-foreground px-3 py-1 rounded text-sm hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
           ) : (
-            <span className="text-gray-400 italic">No OUT punch</span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground italic">No OUT punch</span>
+              <button
+                onClick={() => setAddingPunchOut(true)}
+                className="text-primary text-sm font-medium hover:opacity-80"
+              >
+                + Add Punch Out
+              </button>
+            </div>
           )}
         </div>
 
         <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+            className="px-4 py-2 text-muted-foreground hover:bg-muted rounded transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSubmitting}
-            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </button>

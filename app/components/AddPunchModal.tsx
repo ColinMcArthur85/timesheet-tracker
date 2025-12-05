@@ -6,16 +6,18 @@ import { useRouter } from 'next/navigation';
 interface AddPunchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialDate?: Date;
+  initialDate?: Date | string;
 }
+
+type PunchType = 'in' | 'out' | 'both';
 
 export default function AddPunchModal({ isOpen, onClose, initialDate }: AddPunchModalProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [addBothPunches, setAddBothPunches] = useState(true);
+  const [punchType, setPunchType] = useState<PunchType>('both');
   
-  // Default to provided date or now
-  const baseDate = initialDate || new Date();
+  // Default to provided date or now, ensure it's a Date object
+  const baseDate = initialDate ? new Date(initialDate) : new Date();
   const tzOffset = baseDate.getTimezoneOffset() * 60000;
   const localISOTime = (new Date(baseDate.getTime() - tzOffset)).toISOString().slice(0, 16);
   
@@ -56,18 +58,20 @@ export default function AddPunchModal({ isOpen, onClose, initialDate }: AddPunch
     setIsSubmitting(true);
     try {
       // Add punch in
-      const resIn = await fetch('/api/punches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: 'IN',
-          timestamp: new Date(punchInTime).toISOString(),
-        }),
-      });
-      if (!resIn.ok) throw new Error('Failed to create punch in');
+      if (punchType === 'in' || punchType === 'both') {
+        const resIn = await fetch('/api/punches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventType: 'IN',
+            timestamp: new Date(punchInTime).toISOString(),
+          }),
+        });
+        if (!resIn.ok) throw new Error('Failed to create punch in');
+      }
 
-      // Add punch out if checkbox is checked
-      if (addBothPunches) {
+      // Add punch out
+      if (punchType === 'out' || punchType === 'both') {
         const resOut = await fetch('/api/punches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -91,51 +95,85 @@ export default function AddPunchModal({ isOpen, onClose, initialDate }: AddPunch
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <h2 className="text-xl font-bold mb-4">Add Manual Punch</h2>
+      <div className="bg-card rounded-lg p-6 w-full max-w-md border border-border">
+        <h2 className="text-xl font-bold mb-4 text-foreground">Add Manual Punch</h2>
         
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-900 mb-1">
-              Punch In {initialDate ? 'Time' : 'Date & Time'}
+          {/* Punch Type Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-foreground mb-3">
+              Punch Type
             </label>
-            {initialDate ? (
-              <input
-                type="time"
-                value={punchInTime.slice(11, 16)}
-                onChange={(e) => {
-                  const dateStr = punchInTime.slice(0, 10);
-                  setPunchInTime(`${dateStr}T${e.target.value}`);
-                }}
-                className="w-full border rounded px-3 py-2"
-                required
-              />
-            ) : (
-              <input
-                type="datetime-local"
-                value={punchInTime}
-                onChange={(e) => setPunchInTime(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-                required
-              />
-            )}
+            <div className="space-y-2">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="punchType"
+                  value="in"
+                  checked={punchType === 'in'}
+                  onChange={(e) => setPunchType(e.target.value as PunchType)}
+                  className="mr-3"
+                />
+                <span className="text-sm text-foreground">Punch In Only</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="punchType"
+                  value="out"
+                  checked={punchType === 'out'}
+                  onChange={(e) => setPunchType(e.target.value as PunchType)}
+                  className="mr-3"
+                />
+                <span className="text-sm text-foreground">Punch Out Only</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="punchType"
+                  value="both"
+                  checked={punchType === 'both'}
+                  onChange={(e) => setPunchType(e.target.value as PunchType)}
+                  className="mr-3"
+                />
+                <span className="text-sm text-foreground">Complete Session (Both)</span>
+              </label>
+            </div>
           </div>
 
-          <div className="mb-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={addBothPunches}
-                onChange={(e) => setAddBothPunches(e.target.checked)}
-                className="mr-2"
-              />
-              <span className="text-sm text-gray-900">Also add Punch Out</span>
-            </label>
-          </div>
+          {/* Punch In Time */}
+          {(punchType === 'in' || punchType === 'both') && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Punch In {initialDate ? 'Time' : 'Date & Time'}
+              </label>
+              {initialDate ? (
+                <input
+                  type="time"
+                  value={punchInTime.slice(11, 16)}
+                  onChange={(e) => {
+                    const dateStr = punchInTime.slice(0, 10);
+                    setPunchInTime(`${dateStr}T${e.target.value}`);
+                  }}
+                  className="w-full border border-border bg-muted text-foreground rounded px-3 py-2"
+                  required
+                />
+              ) : (
+                <input
+                  type="datetime-local"
+                  value={punchInTime}
+                  onChange={(e) => setPunchInTime(e.target.value)}
+                  className="w-full border border-border bg-muted text-foreground rounded px-3 py-2"
+                  required
+                />
+              )}
+            </div>
+          )}
 
-          {addBothPunches && (
+          {/* Punch Out Time */}
+          {(punchType === 'out' || punchType === 'both') && (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-900 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Punch Out {initialDate ? 'Time' : 'Date & Time'}
               </label>
               {initialDate ? (
@@ -146,7 +184,7 @@ export default function AddPunchModal({ isOpen, onClose, initialDate }: AddPunch
                     const dateStr = punchOutTime.slice(0, 10);
                     setPunchOutTime(`${dateStr}T${e.target.value}`);
                   }}
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border border-border bg-muted text-foreground rounded px-3 py-2"
                   required
                 />
               ) : (
@@ -154,7 +192,7 @@ export default function AddPunchModal({ isOpen, onClose, initialDate }: AddPunch
                   type="datetime-local"
                   value={punchOutTime}
                   onChange={(e) => setPunchOutTime(e.target.value)}
-                  className="w-full border rounded px-3 py-2"
+                  className="w-full border border-border bg-muted text-foreground rounded px-3 py-2"
                   required
                 />
               )}
@@ -165,16 +203,18 @@ export default function AddPunchModal({ isOpen, onClose, initialDate }: AddPunch
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+              className="px-4 py-2 text-muted-foreground hover:bg-muted rounded transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
-              {isSubmitting ? 'Saving...' : addBothPunches ? 'Add Session' : 'Add Punch'}
+              {isSubmitting ? 'Saving...' : 
+                punchType === 'both' ? 'Add Session' : 
+                punchType === 'in' ? 'Add Punch In' : 'Add Punch Out'}
             </button>
           </div>
         </form>
