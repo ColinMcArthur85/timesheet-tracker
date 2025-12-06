@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDecimalHours } from '@/lib/time-utils';
 
 interface EndDayButtonProps {
   isClockedIn: boolean;
@@ -14,10 +15,10 @@ export default function EndDayButton({ isClockedIn, totalHours }: EndDayButtonPr
 
   const handleEndDay = async () => {
     if (isClockedIn) {
-      const confirmMessage = `You're still clocked in. This will punch you OUT and end your day with ${totalHours.toFixed(2)} hours total. Continue?`;
+      const confirmMessage = `You're still clocked in. This will punch you OUT and end your day with ${formatDecimalHours(totalHours)} total. Continue?`;
       if (!confirm(confirmMessage)) return;
     } else {
-      const confirmMessage = `End your day with ${totalHours.toFixed(2)} hours total?`;
+      const confirmMessage = `End your day with ${formatDecimalHours(totalHours)} total?`;
       if (!confirm(confirmMessage)) return;
     }
 
@@ -37,7 +38,7 @@ export default function EndDayButton({ isClockedIn, totalHours }: EndDayButtonPr
       }
 
       // Show success message
-      alert(`Day ended! Total hours: ${totalHours.toFixed(2)}`);
+      alert(`Day ended! Total hours: ${formatDecimalHours(totalHours)}`);
       
       router.refresh();
     } catch (error) {

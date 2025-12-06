@@ -20,6 +20,20 @@ export function formatDuration(minutes: number): string {
   return `${hours}:${mins.toString().padStart(2, '0')}`;
 }
 
+export function formatDecimalHours(decimalHours: number): string {
+  const isNegative = decimalHours < 0;
+  const absHours = Math.abs(decimalHours);
+  const hours = Math.floor(absHours);
+  const minutes = Math.round((absHours - hours) * 60);
+  
+  // Handle case where rounding minutes bumps up an hour (e.g. 5.99 -> 6h 0m)
+  if (minutes === 60) {
+    return `${isNegative ? '-' : ''}${hours + 1}h 00m`;
+  }
+  
+  return `${isNegative ? '-' : ''}${hours}h ${minutes.toString().padStart(2, '0')}m`;
+}
+
 export function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString('en-US', {
     month: 'short',

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { PayPeriod, isCurrentPayPeriod } from '@/lib/pay-period-utils';
 import PayPeriodNavigator from './PayPeriodNavigator';
 import SessionList from './SessionList';
-import { formatTime, formatDate, formatLongDate } from '@/lib/time-utils';
+import { formatTime, formatDate, formatLongDate, formatDecimalHours } from '@/lib/time-utils';
 import { DayData } from '@/lib/types';
 
 interface PayPeriodSectionProps {
@@ -89,13 +89,13 @@ export default function PayPeriodSection({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-50 rounded-lg p-4 text-center">
               <div className="text-3xl font-bold text-indigo-600">
-                {stats.total_hours.toFixed(2)}
+                {formatDecimalHours(stats.total_hours)}
               </div>
               <div className="text-sm text-gray-600 mt-1">Total Hours</div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4 text-center">
               <div className="text-3xl font-bold text-indigo-600">
-                {stats.potential_hours.toFixed(2)}
+                {formatDecimalHours(stats.potential_hours)}
               </div>
               <div className="text-sm text-gray-600 mt-1">Potential Hours</div>
             </div>
@@ -105,7 +105,7 @@ export default function PayPeriodSection({
                   stats.difference >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {stats.difference.toFixed(2)}
+                {formatDecimalHours(stats.difference)}
               </div>
               <div className="text-sm text-gray-600 mt-1">Difference</div>
             </div>
@@ -143,7 +143,7 @@ export default function PayPeriodSection({
               <tbody>
                 {days.map((day, idx) => {
                   const dateStr = formatDate(new Date(day.date));
-                  const totalHours = (day.total_minutes / 60).toFixed(2);
+                  const totalHours = formatDecimalHours(day.total_minutes / 60);
 
                   return (
                     <tr 

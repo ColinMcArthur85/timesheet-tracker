@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { formatTime } from '@/lib/time-utils';
+import { formatTime, formatDecimalHours } from '@/lib/time-utils';
 import EditSessionModal from './EditSessionModal';
 import AddPunchModal from './AddPunchModal';
 import LiveDuration from './LiveDuration';
@@ -117,7 +117,7 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
         </table>
       </div>
       <div className="mt-4 text-right font-semibold text-foreground">
-        Total Today: {(totalMinutes / 60).toFixed(2)} hrs
+        Total Today: {formatDecimalHours(totalMinutes / 60)}
       </div>
 
       <EditSessionModal
