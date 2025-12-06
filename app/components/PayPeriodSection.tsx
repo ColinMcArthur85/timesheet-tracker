@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { PayPeriod, isCurrentPayPeriod } from '@/lib/pay-period-utils';
 import PayPeriodNavigator from './PayPeriodNavigator';
 import SessionList from './SessionList';
+import LiveTotal from './LiveTotal';
+import LiveDifference from './LiveDifference';
 import { formatTime, formatDate, formatLongDate, formatDecimalHours } from '@/lib/time-utils';
 import { DayData } from '@/lib/types';
 
@@ -65,7 +67,27 @@ export default function PayPeriodSection({
     }
   };
 
+
   const isCurrent = isCurrentPayPeriod(period);
+
+  // Calculate closed minutes for the entire period
+  const closedPeriodMinutes = days.reduce((total, day) => {
+    const dayClosed = day.sessions.reduce((dTotal, s: any) => {
+       if (s.punch_out) return dTotal + s.duration_minutes;
+       return dTotal;
+    }, 0);
+    return total + dayClosed;
+  }, 0);
+
+  // Find open session start time
+  let openSessionStart = null;
+  for (const day of days) {
+    const open = day.sessions.find((s:any) => !s.punch_out);
+    if (open) {
+      openSessionStart = open.punch_in;
+      break;
+    }
+  }
 
   return (
     <>
@@ -89,7 +111,7 @@ export default function PayPeriodSection({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-gray-50 rounded-lg p-4 text-center">
               <div className="text-3xl font-bold text-indigo-600">
-                {formatDecimalHours(stats.total_hours)}
+                <LiveTotal baseMinutes={closedPeriodMinutes} startTime={openSessionStart} />
               </div>
               <div className="text-sm text-gray-600 mt-1">Total Hours</div>
             </div>
@@ -100,13 +122,11 @@ export default function PayPeriodSection({
               <div className="text-sm text-gray-600 mt-1">Potential Hours</div>
             </div>
             <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div
-                className={`text-3xl font-bold ${
-                  stats.difference >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {formatDecimalHours(stats.difference)}
-              </div>
+              <LiveDifference 
+                baseMinutes={closedPeriodMinutes} 
+                potentialMinutes={stats.potential_hours * 60} 
+                startTime={openSessionStart} 
+              />
               <div className="text-sm text-gray-600 mt-1">Difference</div>
             </div>
           </div>

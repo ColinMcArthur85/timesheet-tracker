@@ -6,6 +6,7 @@ import { formatTime, formatDecimalHours } from '@/lib/time-utils';
 import EditSessionModal from './EditSessionModal';
 import AddPunchModal from './AddPunchModal';
 import LiveDuration from './LiveDuration';
+import LiveTotal from './LiveTotal';
 
 interface SessionListProps {
   sessions: any[];
@@ -53,6 +54,13 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
     }
   };
 
+
+  const closedMinutes = sessions.reduce((acc, s) => {
+    if (s.punch_out) return acc + s.duration_minutes;
+    return acc;
+  }, 0);
+  const openSession = sessions.find(s => !s.punch_out);
+
   return (
     <div>
       <div className="flex justify-end mb-4">
@@ -88,7 +96,7 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
                   <td className="py-3 text-foreground">{formatTime(session.punch_out)}</td>
                   <td className="py-3 text-foreground">
                     {session.punch_out ? (
-                      `${session.duration_minutes}m`
+                      formatDecimalHours(session.duration_minutes / 60)
                     ) : (
                       <LiveDuration punchInTime={session.punch_in} />
                     )}
@@ -117,7 +125,7 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
         </table>
       </div>
       <div className="mt-4 text-right font-semibold text-foreground">
-        Total Today: {formatDecimalHours(totalMinutes / 60)}
+        Total Today: <LiveTotal baseMinutes={closedMinutes} startTime={openSession?.punch_in} />
       </div>
 
       <EditSessionModal
