@@ -1,5 +1,8 @@
 import { ProcessedSession, DayData, PayPeriodStats } from './types';
 import { startOfDay, endOfDay, addDays, differenceInDays, getDay } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+
+const TIMEZONE = 'America/Vancouver';
 
 export function calculatePayPeriodStats(
   startDate: Date,
@@ -18,7 +21,9 @@ export function calculatePayPeriodStats(
   const end = new Date(endDate);
 
   while (current <= end) {
-    const dayOfWeek = getDay(current);
+    // Convert to zoned time to check the day of week in Vancouver
+    const zonedCurrent = toZonedTime(current, TIMEZONE);
+    const dayOfWeek = getDay(zonedCurrent);
     // Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
     if ([2, 3, 4, 5, 6].includes(dayOfWeek)) {
       potentialMinutes += 8 * 60; // Assuming 8 hour shifts
@@ -44,7 +49,12 @@ export function organizeSessionsByDay(
   const sessionsMap = new Map<string, ProcessedSession[]>();
 
   for (const s of sessions) {
-    const dateKey = startOfDay(new Date(s.date)).toISOString();
+    // Convert session date to Vancouver time to find which day it belongs to
+    const zonedDate = toZonedTime(new Date(s.date), TIMEZONE);
+    const zonedStartOfDay = startOfDay(zonedDate);
+    // Convert back to UTC to use as key (matches the 'current' iterator which is also UTC-aligned to PST start)
+    const dateKey = fromZonedTime(zonedStartOfDay, TIMEZONE).toISOString();
+    
     if (!sessionsMap.has(dateKey)) {
       sessionsMap.set(dateKey, []);
     }
@@ -56,7 +66,9 @@ export function organizeSessionsByDay(
   const end = new Date(endDate);
 
   while (current <= end) {
-    const dateKey = startOfDay(current).toISOString();
+    // current is already aligned to start of day in PST (but as UTC timestamp)
+    // e.g. 08:00 UTC.
+    const dateKey = current.toISOString();
     const daySessions = sessionsMap.get(dateKey) || [];
 
     // Sort by punch_in time

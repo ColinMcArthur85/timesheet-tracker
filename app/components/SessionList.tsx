@@ -71,14 +71,13 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
               <th className="pb-3 font-semibold">In</th>
               <th className="pb-3 font-semibold">Out</th>
               <th className="pb-3 font-semibold">Duration</th>
-              <th className="pb-3 font-semibold">Notes</th>
               <th className="pb-3 font-semibold w-32"></th>
             </tr>
           </thead>
           <tbody>
             {sessions.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-4 text-center text-muted-foreground">
+                <td colSpan={4} className="py-4 text-center text-muted-foreground">
                   No activity today
                 </td>
               </tr>
@@ -94,7 +93,6 @@ export default function SessionList({ sessions, totalMinutes, initialDate, onUpd
                       <LiveDuration punchInTime={session.punch_in} />
                     )}
                   </td>
-                  <td className="py-3 text-muted-foreground">{session.notes || '-'}</td>
                   <td className="py-3 text-right">
                     <div className="flex gap-2 justify-end">
                       <button

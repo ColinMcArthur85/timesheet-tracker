@@ -2,6 +2,7 @@ import { getPunchEventsByDateRange, getLastPunchEvent } from '@/lib/db';
 import { processPunches } from '@/lib/punch-processor';
 import { calculatePayPeriodStats, organizeSessionsByDay } from '@/lib/pay-period';
 import { getStartOfDay, getEndOfDay, formatFullDate, formatTime, formatDuration, formatDate } from '@/lib/time-utils';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { getPayPeriodForDate } from '@/lib/pay-period-utils';
 import AutoRefresh from './components/AutoRefresh';
 import SessionList from './components/SessionList';
@@ -12,9 +13,23 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function Home() {
-  const today = new Date();
-  const todayStart = getStartOfDay(today);
-  const todayEnd = getEndOfDay(today);
+  const TIMEZONE = 'America/Vancouver';
+  const now = new Date();
+  const zonedNow = toZonedTime(now, TIMEZONE);
+  
+  // Calculate today's start/end in Vancouver time, then convert to UTC timestamps
+  const startOfDayZoned = new Date(zonedNow);
+  startOfDayZoned.setHours(0, 0, 0, 0);
+  const todayStart = fromZonedTime(startOfDayZoned, TIMEZONE);
+  
+  const endOfDayZoned = new Date(zonedNow);
+  endOfDayZoned.setHours(23, 59, 59, 999);
+  const todayEnd = fromZonedTime(endOfDayZoned, TIMEZONE);
+  
+  // Use the zoned date for "today" reference (e.g. for getPayPeriodForDate)
+  // We need to pass a date that getPayPeriodForDate will interpret correctly.
+  // Our updated getPayPeriodForDate takes a Date and converts it toZonedTime.
+  // So we can pass 'now' (UTC) and it will work.
 
   // Get today's punches
   const todayPunches = await getPunchEventsByDateRange(todayStart, todayEnd);
@@ -33,11 +48,14 @@ export default async function Home() {
   }
 
   // Get pay period stats (Current pay period: 1st-14th or 15th-end of month)
-  const currentPayPeriod = getPayPeriodForDate(today);
+  const currentPayPeriod = getPayPeriodForDate(now);
   const ppStart = currentPayPeriod.start;
   const ppEnd = currentPayPeriod.end;
-  const ppStartDay = getStartOfDay(ppStart);
-  const ppEndDay = getEndOfDay(ppEnd);
+  
+  // ppStart and ppEnd are already correct UTC timestamps for the start/end of the period in Vancouver time
+  // So we don't need getStartOfDay/getEndOfDay on them again (which would shift them if they were local)
+  const ppStartDay = ppStart;
+  const ppEndDay = ppEnd;
 
   const ppPunches = await getPunchEventsByDateRange(ppStartDay, ppEndDay);
   const ppSessions = processPunches(ppPunches as any);
@@ -61,7 +79,7 @@ export default async function Home() {
       <div className="max-w-4xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Timesheet Tracker</h1>
-          <p className="text-gray-600">{formatFullDate(today)}</p>
+          <p className="text-gray-600">{formatFullDate(todayStart)}</p>
         </header>
 
         {/* Current Status */}
