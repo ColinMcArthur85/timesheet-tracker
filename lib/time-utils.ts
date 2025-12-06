@@ -38,6 +38,15 @@ export function formatFullDate(date: Date): string {
   });
 }
 
+export function formatLongDate(date: Date): string {
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'America/Vancouver',
+  });
+}
+
 export function getPSTDate(date?: Date): Date {
   const d = date || new Date();
   // Convert to PST

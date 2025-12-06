@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { PayPeriod, isCurrentPayPeriod } from '@/lib/pay-period-utils';
 import PayPeriodNavigator from './PayPeriodNavigator';
 import SessionList from './SessionList';
-import { formatTime } from '@/lib/time-utils';
+import { formatTime, formatDate, formatLongDate } from '@/lib/time-utils';
 import { DayData } from '@/lib/types';
 
 interface PayPeriodSectionProps {
@@ -142,10 +142,7 @@ export default function PayPeriodSection({
               </thead>
               <tbody>
                 {days.map((day, idx) => {
-                  const dateStr = new Date(day.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  });
+                  const dateStr = formatDate(new Date(day.date));
                   const totalHours = (day.total_minutes / 60).toFixed(2);
 
                   return (
@@ -196,11 +193,7 @@ export default function PayPeriodSection({
             <div className="bg-card rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-gray-900">
-                  Activity for {new Date(selectedDay.date).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
+                  Activity for {formatLongDate(new Date(selectedDay.date))}
                 </h2>
                 <button
                   onClick={() => setSelectedDay(null)}
