@@ -7,7 +7,7 @@ import { getPayPeriodForDate } from "@/lib/pay-period-utils";
 import AutoRefresh from "./components/AutoRefresh";
 import SessionList from "./components/SessionList";
 import PayPeriodSection from "./components/PayPeriodSection";
-import EndDayButton from "./components/EndDayButton";
+// Removed EndDayButton per request
 import ModeBanner from "./components/ModeBanner";
 import { headers } from "next/headers";
 
@@ -78,31 +78,33 @@ export default async function Home() {
   const lastPunchId = latestEvent?.id || 0;
 
   return (
-    <div className="min-h-screen bg-muted">
+    <div className="min-h-screen bg-black text-white">
       <ModeBanner isDemo={isDemo} />
       <AutoRefresh initialLastPunchId={lastPunchId} />
 
       <div className="py-8 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <header className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Timesheet Tracker</h1>
-            <p className="text-gray-600">{formatFullDate(todayStart)}</p>
+            <h1 className="mb-2 text-white">Timesheet Tracker</h1>
+            <p className="text-white/70">{formatFullDate(todayStart)}</p>
           </header>
 
-          {/* Current Status */}
-          <div className="bg-card rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">Current Status</h2>
-            <div className="text-center">
-              <span className={`inline-block px-4 py-1 rounded-full text-sm font-medium ${isClockedIn ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{isClockedIn ? "Clocked In" : "Clocked Out"}</span>
-              {lastPunch && <p className="mt-2 text-gray-600">Last punch: {lastPunch}</p>}
-            </div>
-          </div>
+          {/* Dashboard layout on desktop, stacked on mobile */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            {/* Current Status */}
+            <section className="md:col-span-5 p-6 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-xl shadow-2xl">
+              <h2 className="border-b border-white/20 pb-3 mb-4 text-white">Current Status</h2>
+              <div className="text-center">
+                <span className={`inline-block px-4 py-1 rounded-full text-sm font-medium ${isClockedIn ? "bg-green-500/20 text-green-300" : "bg-white/20 text-white"}`}>{isClockedIn ? "Clocked In" : "Clocked Out"}</span>
+                {lastPunch && <p className="mt-2 text-white/70">Last punch: {lastPunch}</p>}
+              </div>
+            </section>
 
-          {/* Today's Activity */}
-          <div className="bg-card rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">Today&apos;s Activity</h2>
-            <SessionList sessions={todaySessions} totalMinutes={todayTotalMinutes} />
-            <EndDayButton isClockedIn={isClockedIn} totalHours={todayTotalMinutes / 60} />
+            {/* Today\'s Activity */}
+            <section className="md:col-span-7 p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
+              <h2 className="border-b border-white/10 pb-3 mb-4 text-white">Today&apos;s Activity</h2>
+              <SessionList sessions={todaySessions} totalMinutes={todayTotalMinutes} />
+            </section>
           </div>
 
           {/* Pay Period Stats and Summary */}

@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { PayPeriod, isCurrentPayPeriod } from '@/lib/pay-period-utils';
-import PayPeriodNavigator from './PayPeriodNavigator';
-import SessionList from './SessionList';
-import LiveTotal from './LiveTotal';
-import LiveDifference from './LiveDifference';
-import { formatTime, formatDate, formatLongDate, formatDecimalHours } from '@/lib/time-utils';
-import { DayData } from '@/lib/types';
+import { useState, useEffect } from "react";
+import { PayPeriod, isCurrentPayPeriod } from "@/lib/pay-period-utils";
+import PayPeriodNavigator from "./PayPeriodNavigator";
+import SessionList from "./SessionList";
+import LiveTotal from "./LiveTotal";
+import LiveDifference from "./LiveDifference";
+import { formatTime, formatDate, formatLongDate, formatDecimalHours } from "@/lib/time-utils";
+import { DayData } from "@/lib/types";
 
 interface PayPeriodSectionProps {
   initialPeriod: PayPeriod;
@@ -19,11 +19,7 @@ interface PayPeriodSectionProps {
   initialDays: DayData[];
 }
 
-export default function PayPeriodSection({
-  initialPeriod,
-  initialStats,
-  initialDays,
-}: PayPeriodSectionProps) {
+export default function PayPeriodSection({ initialPeriod, initialStats, initialDays }: PayPeriodSectionProps) {
   const [period, setPeriod] = useState(initialPeriod);
   const [stats, setStats] = useState(initialStats);
   const [days, setDays] = useState(initialDays);
@@ -35,9 +31,7 @@ export default function PayPeriodSection({
   // Update modal data when selectedDay or days changes
   useEffect(() => {
     if (selectedDay) {
-      const currentDayData = days.find(d => 
-        new Date(d.date).toDateString() === new Date(selectedDay.date).toDateString()
-      );
+      const currentDayData = days.find((d) => new Date(d.date).toDateString() === new Date(selectedDay.date).toDateString());
       if (currentDayData) {
         setModalSessions(currentDayData.sessions);
         setModalTotal(currentDayData.total_minutes);
@@ -48,9 +42,9 @@ export default function PayPeriodSection({
   const handlePeriodChange = async (newPeriod: PayPeriod) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/pay-period/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/pay-period/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           start: newPeriod.start.toISOString(),
           end: newPeriod.end.toISOString(),
@@ -61,20 +55,19 @@ export default function PayPeriodSection({
       setDays(data.days);
       setPeriod(newPeriod);
     } catch (error) {
-      console.error('Error fetching pay period data:', error);
+      console.error("Error fetching pay period data:", error);
     } finally {
       setLoading(false);
     }
   };
-
 
   const isCurrent = isCurrentPayPeriod(period);
 
   // Calculate closed minutes for the entire period
   const closedPeriodMinutes = days.reduce((total, day) => {
     const dayClosed = day.sessions.reduce((dTotal, s: any) => {
-       if (s.punch_out) return dTotal + s.duration_minutes;
-       return dTotal;
+      if (s.punch_out) return dTotal + s.duration_minutes;
+      return dTotal;
     }, 0);
     return total + dayClosed;
   }, 0);
@@ -82,7 +75,7 @@ export default function PayPeriodSection({
   // Find open session start time
   let openSessionStart = null;
   for (const day of days) {
-    const open = day.sessions.find((s:any) => !s.punch_out);
+    const open = day.sessions.find((s: any) => !s.punch_out);
     if (open) {
       openSessionStart = open.punch_in;
       break;
@@ -92,16 +85,13 @@ export default function PayPeriodSection({
   return (
     <>
       {/* Pay Period Stats */}
-      <div className="bg-card rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">
-          Pay Period Stats
-        </h2>
+      <div className="p-6 mb-6 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-xl shadow-2xl">
+        <div className="flex-between mb-4 border-b border-white/20 pb-3">
+          <h2 className="text-white">Pay Period Stats</h2>
+          <button className="btn-sm-primary">Export PDF</button>
+        </div>
 
-        <PayPeriodNavigator
-          initialPeriod={period}
-          isCurrentPeriod={isCurrent}
-          onPeriodChange={handlePeriodChange}
-        />
+        <PayPeriodNavigator initialPeriod={period} isCurrentPeriod={isCurrent} onPeriodChange={handlePeriodChange} />
 
         {loading ? (
           <div className="text-center py-8">
@@ -109,35 +99,32 @@ export default function PayPeriodSection({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-indigo-600">
+            <div className="rounded-lg p-4 text-center border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
+              <div className="text-3xl font-bold text-white">
                 <LiveTotal baseMinutes={closedPeriodMinutes} startTime={openSessionStart} />
               </div>
-              <div className="text-sm text-gray-600 mt-1">Total Hours</div>
+              <div className="text-sm text-white/70 mt-1">Total Hours</div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <div className="text-3xl font-bold text-indigo-600">
-                {formatDecimalHours(stats.potential_hours)}
+            <div className="rounded-lg p-4 text-center border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
+              <div className="text-3xl font-bold text-white">{formatDecimalHours(stats.potential_hours)}</div>
+              <div className="text-sm text-white/70 mt-1">Potential Hours</div>
+            </div>
+            <div className="rounded-lg p-4 text-center border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
+              <div className={stats.difference < 0 ? "text-accent-red text-3xl font-bold" : "text-accent-green text-3xl font-bold"}>
+                <LiveDifference baseMinutes={closedPeriodMinutes} potentialMinutes={stats.potential_hours * 60} startTime={openSessionStart} />
               </div>
-              <div className="text-sm text-gray-600 mt-1">Potential Hours</div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <LiveDifference 
-                baseMinutes={closedPeriodMinutes} 
-                potentialMinutes={stats.potential_hours * 60} 
-                startTime={openSessionStart} 
-              />
-              <div className="text-sm text-gray-600 mt-1">Difference</div>
+              <div className="text-sm text-white/70 mt-1">Difference</div>
             </div>
           </div>
         )}
       </div>
 
       {/* Pay Period Summary */}
-      <div className="bg-card rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">
-          Pay Period Summary
-        </h2>
+      <div className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
+        <div className="flex-between mb-4 border-b border-white/10 pb-3">
+          <h2 className="text-white">Pay Period Summary</h2>
+          <button className="btn-sm-primary">Export PDF</button>
+        </div>
 
         {loading ? (
           <div className="text-center py-8">
@@ -147,16 +134,10 @@ export default function PayPeriodSection({
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                    Day
-                  </th>
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                    Sessions
-                  </th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                    Total
-                  </th>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-accent-blue">Day</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-accent-blue">Sessions</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-accent-blue">Total</th>
                   <th className="w-10"></th>
                 </tr>
               </thead>
@@ -166,31 +147,25 @@ export default function PayPeriodSection({
                   const totalHours = formatDecimalHours(day.total_minutes / 60);
 
                   return (
-                    <tr 
-                      key={idx} 
-                      className="border-b border-gray-100 hover:bg-muted group cursor-pointer"
-                      onClick={() => setSelectedDay(day)}
-                    >
-                      <td className="py-3 px-4 text-sm text-foreground">{dateStr}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">
+                    <tr key={idx} className="border-b border-white/5 hover:bg-white/10 group cursor-pointer" onClick={() => setSelectedDay(day)}>
+                      <td className="py-3 px-4 text-sm text-white">{dateStr}</td>
+                      <td className="py-3 px-4 text-sm text-white/80">
                         {day.sessions.length > 0 ? (
                           <div className="flex flex-col gap-1">
                             {day.sessions.map((session: any, sIdx: number) => (
-                              <div key={sIdx} className="text-xs">
-                                {formatTime(session.punch_in)} - {session.punch_out ? formatTime(session.punch_out) : 'Open'}
+                              <div key={sIdx} className="text-xs text-white/80">
+                                {formatTime(session.punch_in)} - {session.punch_out ? formatTime(session.punch_out) : "Open"}
                               </div>
                             ))}
                           </div>
                         ) : (
-                          '-'
+                          "-"
                         )}
                       </td>
-                      <td className="py-3 px-4 text-sm text-foreground text-right">
-                        {totalHours}
-                      </td>
+                      <td className="py-3 px-4 text-sm text-white text-right">{totalHours}</td>
                       <td className="py-3 px-4 text-right">
                         <button
-                          className="text-primary hover:opacity-80 text-sm font-medium transition-opacity opacity-0 group-hover:opacity-100"
+                          className="text-[color:var(--color-primary)] hover:opacity-80 text-sm font-medium transition-opacity opacity-0 group-hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedDay(day);
@@ -209,23 +184,18 @@ export default function PayPeriodSection({
 
         {/* Day Details Modal */}
         {selectedDay && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" onClick={() => setSelectedDay(null)}>
+            <div className="rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/20 bg-white/5 backdrop-blur-xl shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">
-                  Activity for {formatLongDate(new Date(selectedDay.date))}
-                </h2>
-                <button
-                  onClick={() => setSelectedDay(null)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  Close
+                <h2 className="text-white">Activity for {formatLongDate(new Date(selectedDay.date))}</h2>
+                <button onClick={() => setSelectedDay(null)} className="text-white/70 hover:text-white transition-colors">
+                  ✕
                 </button>
               </div>
-              
-              <div className="border rounded-lg p-4">
-                <SessionList 
-                  sessions={modalSessions} 
+
+              <div className="border border-white/10 rounded-lg p-4">
+                <SessionList
+                  sessions={modalSessions}
                   totalMinutes={modalTotal}
                   initialDate={selectedDay.date}
                   onUpdate={() => {

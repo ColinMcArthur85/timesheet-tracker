@@ -13,6 +13,25 @@
   --destructive: #f85149; /* errorForeground */
   --success: #2ea043; /* editorGutter.addedBackground */
   --success-bg: #2ea04326; /* ~15% opacity */
+  /* Design Tokens */
+  --color-primary: #3b82f6; /* Tailwind blue-500 */
+  --color-secondary: #7928ca;
+  --color-accent: #79ffe1;
+  /* VS Code Dark Modern accents */
+  --accent-blue: #4fc1ff; /* parameter, function args */
+  --accent-cyan: #79ffe1; /* strings/attributes like accent */
+  --accent-purple: #c792ea; /* keywords */
+  --accent-green: #addb67; /* numbers/consts */
+  --accent-red: #ff5874; /* errors/deletions */
+
+  /* Light palette */
+  --bg-0: 255 255 255; /* pure white */
+  --bg-1: 248 250 252; /* slate-50-ish */
+  --bg-2: 241 245 249; /* slate-100-ish */
+  --text-0: 15 23 42; /* slate-900 */
+  --text-1: 51 65 85; /* slate-700 */
+  --border-0: 226 232 240; /* slate-200 */
+  --shadow-color: 2 6 23; /* slate-950 */
 }
 
 @theme inline {
@@ -28,7 +47,7 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
-  
+
   /* Legacy/Alias Colors for existing usage */
   --color-gray-50: var(--background);
   --color-gray-100: var(--muted);
@@ -45,8 +64,155 @@
   --color-red-600: var(--destructive);
 }
 
+/* Accent text utilities emulating VS Code Dark Modern */
+@layer components {
+  .text-accent-blue {
+    color: var(--accent-blue);
+  }
+  .text-accent-cyan {
+    color: var(--accent-cyan);
+  }
+  .text-accent-purple {
+    color: var(--accent-purple);
+  }
+  .text-accent-green {
+    color: var(--accent-green);
+  }
+  .text-accent-red {
+    color: var(--accent-red);
+  }
+  .text-gradient-primary {
+    background-image: linear-gradient(90deg, var(--color-primary), #6366f1, var(--color-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .badge-muted {
+    @apply inline-block px-3 py-1 rounded-full text-xs font-medium bg-white/10 text-white/80 border border-white/20;
+  }
+}
+
+/* Base typography adjustments */
+@layer base {
+  h1 {
+    @apply font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight;
+  }
+  h2 {
+    @apply font-bold text-2xl sm:text-3xl lg:text-4xl tracking-tight;
+  }
+  h3 {
+    @apply font-bold text-xl sm:text-2xl tracking-tight;
+  }
+  h4 {
+    @apply font-bold text-lg tracking-tight;
+  }
+  h5 {
+    @apply font-bold text-base tracking-tight;
+  }
+  h6 {
+    @apply font-bold text-sm tracking-tight;
+  }
+  p {
+    @apply text-base leading-relaxed;
+  }
+}
+
+/* Components */
+@layer components {
+  /* Card styles */
+  .primary-card {
+    @apply rounded-3xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-2xl relative overflow-hidden isolate;
+  }
+  .primary-card::before {
+    content: "";
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background-image: linear-gradient(to bottom right, color-mix(in oklab, var(--color-primary) 30%, white 70%), color-mix(in oklab, var(--color-secondary) 30%, white 70%));
+  }
+  .primary-card:hover {
+    @apply translate-y-[-2px] shadow-[0_20px_50px_-10px_rgba(var(--shadow-color),0.35)];
+  }
+  .primary-card:hover::before {
+    @apply opacity-20;
+  }
+
+  .secondary-card {
+    @apply rounded-2xl border border-white/10 bg-white/8 backdrop-blur-lg shadow-xl transition-colors duration-300;
+  }
+  .dark .secondary-card {
+    @apply border-[color:rgb(var(--border-0))]/30 bg-[rgb(var(--bg-2))]/40 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)];
+  }
+
+  /* Supporting elements */
+  .card-icon {
+    @apply flex items-center justify-center w-[14px] h-[14px] rounded-2xl shadow-md bg-white/40 backdrop-blur;
+  }
+  .dark .card-icon {
+    @apply bg-[rgb(var(--bg-2))]/60;
+  }
+
+  .card-title {
+    @apply text-lg font-semibold text-[rgb(var(--text-0))];
+  }
+  .dark .card-title {
+    @apply text-[rgb(var(--text-0))];
+  }
+
+  .card-body {
+    @apply text-sm leading-relaxed text-[rgb(var(--text-1))];
+  }
+
+  .card-shadow {
+    @apply shadow-2xl;
+  }
+  .card-hoverable {
+    @apply transition-transform duration-300 will-change-transform hover:-translate-y-0.5;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-white shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--color-primary)] tracking-wider;
+    @apply px-6 py-3;
+    background-image: linear-gradient(to right, var(--color-primary), #6366f1, /* indigo-500 */ var(--color-secondary));
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .btn-primary:hover {
+    @apply -translate-y-[2px] shadow-[0_25px_60px_-15px_rgba(var(--shadow-color),0.45)];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-[rgb(var(--text-0))] border border-white/20 bg-white/20 backdrop-blur-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--color-primary)] px-5 py-3 tracking-wider transition-transform;
+  }
+  .btn-secondary:hover {
+    @apply -translate-y-[2px] text-[color:var(--color-primary)];
+  }
+  .dark .btn-secondary {
+    @apply text-[rgb(var(--text-0))] border-[color:rgb(var(--border-0))]/40 bg-[rgb(var(--bg-2))]/40;
+  }
+
+  .btn-sm-primary {
+    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-white shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--color-primary)] tracking-wide;
+    @apply px-4 py-2;
+    background-image: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+    transition: transform 200ms ease, box-shadow 200ms ease;
+  }
+  .btn-sm-primary:hover {
+    @apply -translate-y-[2px] shadow-[0_20px_45px_-15px_rgba(var(--shadow-color),0.4)];
+  }
+
+  /* Alignment utilities */
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+  .flex-end {
+    @apply flex items-center justify-end;
+  }
+}
+
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: rgb(var(--bg-0));
+  color: rgb(var(--text-0));
   font-family: Arial, Helvetica, sans-serif;
 }
