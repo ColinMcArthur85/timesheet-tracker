@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface ModeBannerProps {
@@ -23,7 +23,7 @@ export default function ModeBanner({ isDemo }: ModeBannerProps) {
 
   if (isDemo) {
     return (
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 shadow-md">
+      <div className="bg-linear-to-r from-blue-500 to-blue-600 text-white px-4 py-3 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🎭</span>
@@ -42,13 +42,13 @@ export default function ModeBanner({ isDemo }: ModeBannerProps) {
   }
 
   return (
-    <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-3 shadow-md">
+    <div className="bg-linear-to-r from-gray-950 to-blue-950 text-white px-4 py-3 shadow-md">
       <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🔒</span>
           <div>
             <p className="font-semibold">Personal Mode</p>
-            <p className="text-xs text-green-100">Connected to your real timesheet data</p>
+            <p className="text-xs text-white">Connected to your real timesheet data</p>
           </div>
         </div>
 

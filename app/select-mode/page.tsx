@@ -2,11 +2,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 async function setModeAction(formData: FormData) {
-  'use server';
-  
-  const mode = formData.get('mode') as string;
-  
-  if (mode === 'demo' || mode === 'personal') {
+  "use server";
+
+  const mode = formData.get("mode") as string;
+
+  if (mode === "demo" || mode === "personal") {
     const cookieStore = await cookies();
     cookieStore.set("timesheet_mode", mode, {
       maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -21,7 +21,7 @@ async function setModeAction(formData: FormData) {
 
 export default function SelectModePage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 to-gray-100">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-2xl">
         <div>
           <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">Timesheet Tracker</h1>

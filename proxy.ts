@@ -1,16 +1,33 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Proxy: replacement for deprecated middleware in Next.js 16+
+// Mirrors the existing middleware.ts behavior while enabling a future cutover.
+// - Public routes: passthrough
+// - Protected routes: require mode cookie
+// - Demo mode: inject x-demo-mode header
+// - Personal mode: Basic Auth
+// - Dev-only: ?debugClock=in|out forwarded via x-debug-clock
+
 const DEMO_MODE_COOKIE = "timesheet_mode";
 const PROTECTED_ROUTES = ["/", "/api/status", "/api/pay-period", "/api/punches"];
 const PUBLIC_ROUTES = ["/api/slack/events", "/select-mode"];
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const requestHeaders = new Headers(request.headers);
+
+  // Dev-only clock override via query param (?debugClock=in|out)
+  if (process.env.NODE_ENV !== "production") {
+    const debugClock = request.nextUrl.searchParams.get("debugClock");
+    if (debugClock === "in" || debugClock === "out") {
+      requestHeaders.set("x-debug-clock", debugClock);
+    }
+  }
 
   // Always allow public routes (Slack webhook, mode selector)
   if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Restrict /api/debug to non-production
@@ -18,13 +35,13 @@ export function middleware(request: NextRequest) {
     if (process.env.NODE_ENV === "production") {
       return new NextResponse("Not Found", { status: 404 });
     }
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Check if route needs authentication/mode selection
   const needsAuth = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
   if (!needsAuth) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Get mode from cookie
@@ -37,7 +54,8 @@ export function middleware(request: NextRequest) {
 
   // Demo mode: inject header for downstream routes
   if (mode === "demo") {
-    const response = NextResponse.next();
+    requestHeaders.set("x-demo-mode", "true");
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.headers.set("x-demo-mode", "true");
     return response;
   }
@@ -78,7 +96,7 @@ export function middleware(request: NextRequest) {
       }
 
       // Auth successful, continue with personal mode
-      return NextResponse.next();
+      return NextResponse.next({ request: { headers: requestHeaders } });
     } catch (error) {
       console.error("Auth error:", error);
       return new NextResponse("Authentication error", { status: 401 });
@@ -89,15 +107,7 @@ export function middleware(request: NextRequest) {
   return NextResponse.redirect(new URL("/select-mode", request.url));
 }
 
+// Proxy matcher: mirror middleware config; exclude static/image assets
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

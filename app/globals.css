@@ -52,6 +52,73 @@
   --color-gray-50: var(--background);
   --color-gray-100: var(--muted);
   --color-gray-200: var(--border);
+  /* Whimsical status badge animations */
+  @keyframes breathing {
+    0%,
+    100% {
+      transform: scale(0.95);
+      opacity: 0.4;
+    }
+    50% {
+      transform: scale(1.08);
+      opacity: 0.25;
+    }
+  }
+
+  @keyframes orbit-1 {
+    0% {
+      transform: translate(0, 0);
+    }
+    25% {
+      transform: translate(18px, -6px);
+    }
+    50% {
+      transform: translate(0, -12px);
+    }
+    75% {
+      transform: translate(-18px, -6px);
+    }
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+
+  @keyframes orbit-2 {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(-20px, 4px) scale(1.1);
+    }
+    66% {
+      transform: translate(20px, 4px) scale(0.9);
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+  }
+
+  @keyframes orbit-3 {
+    0% {
+      transform: translate(0, 0);
+    }
+    20% {
+      transform: translate(12px, 8px);
+    }
+    40% {
+      transform: translate(24px, 0);
+    }
+    60% {
+      transform: translate(12px, -8px);
+    }
+    80% {
+      transform: translate(-12px, -4px);
+    }
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+
   --color-gray-500: var(--muted-foreground);
   --color-gray-600: var(--muted-foreground);
   --color-gray-800: var(--foreground);
@@ -62,6 +129,36 @@
   --color-green-600: var(--success);
   --color-green-800: var(--success);
   --color-red-600: var(--destructive);
+}
+
+/* Whimsical SVG badge animations */
+.animate-breathing {
+  animation: breathing 3.5s ease-in-out infinite;
+}
+
+.animate-orbit-1 {
+  animation: orbit-1 8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-orbit-2 {
+  animation: orbit-2 10s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-orbit-3 {
+  animation: orbit-3 12s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathing,
+  .animate-orbit-1,
+  .animate-orbit-2,
+  .animate-orbit-3 {
+    animation: none;
+  }
 }
 
 /* Accent text utilities emulating VS Code Dark Modern */
@@ -139,7 +236,7 @@
     @apply rounded-2xl border border-white/10 bg-white/8 backdrop-blur-lg shadow-xl transition-colors duration-300;
   }
   .dark .secondary-card {
-    @apply border-[color:rgb(var(--border-0))]/30 bg-[rgb(var(--bg-2))]/40 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)];
+    @apply border-[rgb(var(--border-0))]/30 bg-[rgb(var(--bg-2))]/40 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)];
   }
 
   /* Supporting elements */
@@ -170,7 +267,7 @@
 
   /* Buttons */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-white shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--color-primary)] tracking-wider;
+    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-white shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-(--color-primary) tracking-wider;
     @apply px-6 py-3;
     background-image: linear-gradient(to right, var(--color-primary), #6366f1, /* indigo-500 */ var(--color-secondary));
     transition: transform 200ms ease, box-shadow 200ms ease;
@@ -180,17 +277,17 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-[rgb(var(--text-0))] border border-white/20 bg-white/20 backdrop-blur-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--color-primary)] px-5 py-3 tracking-wider transition-transform;
+    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-[rgb(var(--text-0))] border border-white/20 bg-white/20 backdrop-blur-lg shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-(--color-primary) px-5 py-3 tracking-wider transition-transform;
   }
   .btn-secondary:hover {
-    @apply -translate-y-[2px] text-[color:var(--color-primary)];
+    @apply -translate-y-[2px] text-(--color-primary);
   }
   .dark .btn-secondary {
-    @apply text-[rgb(var(--text-0))] border-[color:rgb(var(--border-0))]/40 bg-[rgb(var(--bg-2))]/40;
+    @apply text-[rgb(var(--text-0))] border-[rgb(var(--border-0))]/40 bg-[rgb(var(--bg-2))]/40;
   }
 
   .btn-sm-primary {
-    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-white shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[color:var(--color-primary)] tracking-wide;
+    @apply inline-flex items-center justify-center rounded-2xl uppercase font-semibold text-white shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-(--color-primary) tracking-wide;
     @apply px-4 py-2;
     background-image: linear-gradient(to right, var(--color-primary), var(--color-secondary));
     transition: transform 200ms ease, box-shadow 200ms ease;
@@ -214,5 +311,6 @@
 body {
   background-color: rgb(var(--bg-0));
   color: rgb(var(--text-0));
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Fira Code", "JetBrains Mono", "Source Code Pro", "Menlo", "Monaco", "Courier New", monospace;
+  font-feature-settings: "liga" 1, "calt" 1; /* Enable ligatures */
 }
