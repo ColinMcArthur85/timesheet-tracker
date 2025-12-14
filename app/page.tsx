@@ -23,8 +23,13 @@ export default async function Home() {
   const headersList = await headers();
   const isDemo = headersList.get("x-demo-mode") === "true";
   const debugClock = headersList.get("x-debug-clock");
-  // Hardcoded profile details (personal use)
-  const profile = {
+  // Hardcoded profile details (personal use vs demo)
+  const profile = isDemo ? {
+    name: "Demo User",
+    occupation: "Remote Worker",
+    company: "Demo Corp Inc.",
+    avatarUrl: "/profile.png",
+  } : {
     name: "Colin McArthur",
     occupation: "IT Support",
     company: "C.C. McArthur Contracting",
