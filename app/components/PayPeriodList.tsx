@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { formatTime, formatDate, formatDuration } from '@/lib/time-utils';
-import SessionList from './SessionList';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { formatTime, formatDate, formatDuration, formatDecimalHours } from "@/lib/time-utils";
+import { toZonedTime } from "date-fns-tz";
+import SessionList from "./SessionList";
 
 interface PayPeriodListProps {
   days: any[];
@@ -18,9 +19,7 @@ export default function PayPeriodList({ days }: PayPeriodListProps) {
   // Update modal data when selectedDay or days changes
   useEffect(() => {
     if (selectedDay) {
-      const currentDayData = days.find(d => 
-        formatDate(d.date) === formatDate(selectedDay.date)
-      );
+      const currentDayData = days.find((d) => formatDate(d.date) === formatDate(selectedDay.date));
       if (currentDayData) {
         setModalSessions(currentDayData.sessions);
         setModalTotal(currentDayData.total_minutes);
@@ -30,10 +29,8 @@ export default function PayPeriodList({ days }: PayPeriodListProps) {
 
   return (
     <div className="bg-card rounded-lg shadow-sm border border-gray-200 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">
-        Pay Period Summary
-      </h2>
-      
+      <h2 className="text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">Pay Period Summary</h2>
+
       {/* Detailed Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -42,16 +39,13 @@ export default function PayPeriodList({ days }: PayPeriodListProps) {
               <th className="pb-3 font-semibold">Day</th>
               <th className="pb-3 font-semibold text-center">Sessions</th>
               <th className="pb-3 font-semibold text-center">Total</th>
+              <th className="pb-3 font-semibold text-center">Delta vs 8h</th>
               <th className="pb-3 font-semibold w-10"></th>
             </tr>
           </thead>
           <tbody>
             {days.map((day, idx) => (
-              <tr
-                key={idx}
-                className="border-b border-gray-100 last:border-0 hover:bg-gray-50 group cursor-pointer"
-                onClick={() => setSelectedDay(day)}
-              >
+              <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 group cursor-pointer" onClick={() => setSelectedDay(day)}>
                 <td className="py-3 font-medium">{formatDate(day.date)}</td>
                 <td className="py-3 text-center">
                   {day.sessions.length > 0 ? (
@@ -66,15 +60,19 @@ export default function PayPeriodList({ days }: PayPeriodListProps) {
                     <span className="text-gray-400">-</span>
                   )}
                 </td>
-                <td className="py-3 text-center font-medium">
-                  {day.total_minutes > 0 ? formatDuration(day.total_minutes) : '0:00'}
-                </td>
+                <td className="py-3 text-center font-medium">{day.total_minutes > 0 ? formatDuration(day.total_minutes) : "0:00"}</td>
+                {(() => {
+                  const TIMEZONE = "America/Vancouver";
+                  const dayZoned = toZonedTime(new Date(day.date), TIMEZONE);
+                  // Mon–Fri are workdays: 1=Mon ... 5=Fri in JS
+                  const isWorkDay = [1, 2, 3, 4, 5].includes(dayZoned.getDay());
+                  const deltaMinutes = isWorkDay ? day.total_minutes - 8 * 60 : null;
+                  const deltaStr = deltaMinutes === null ? "-" : formatDecimalHours((deltaMinutes as number) / 60);
+                  const deltaClass = deltaMinutes === null ? "text-gray-400" : (deltaMinutes as number) >= 0 ? "text-green-600" : "text-red-600";
+                  return <td className={`py-3 text-center font-medium ${deltaClass}`}>{deltaStr}</td>;
+                })()}
                 <td className="py-3 text-right">
-                   <button
-                      className="text-indigo-600 hover:text-indigo-400 text-sm font-medium transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      Edit
-                    </button>
+                  <button className="text-indigo-600 hover:text-indigo-400 text-sm font-medium transition-colors opacity-0 group-hover:opacity-100">Edit</button>
                 </td>
               </tr>
             ))}
@@ -87,29 +85,24 @@ export default function PayPeriodList({ days }: PayPeriodListProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-card rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                Activity for {formatDate(selectedDay.date)}
-              </h2>
-              <button
-                onClick={() => setSelectedDay(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
+              <h2 className="text-xl font-bold text-gray-900">Activity for {formatDate(selectedDay.date)}</h2>
+              <button onClick={() => setSelectedDay(null)} className="text-gray-500 hover:text-gray-700">
                 Close
               </button>
             </div>
-            
+
             {/* Reuse SessionList but without the container styling since we are in a modal */}
             <div className="border rounded-lg p-4">
-               <SessionList 
-                 sessions={modalSessions} 
-                 totalMinutes={modalTotal}
-                 initialDate={selectedDay.date}
-                 onUpdate={() => {
-                   // Refresh the data from the server
-                   // The useEffect will automatically update modalSessions when days changes
-                   router.refresh();
-                 }}
-               />
+              <SessionList
+                sessions={modalSessions}
+                totalMinutes={modalTotal}
+                initialDate={selectedDay.date}
+                onUpdate={() => {
+                  // Refresh the data from the server
+                  // The useEffect will automatically update modalSessions when days changes
+                  router.refresh();
+                }}
+              />
             </div>
           </div>
         </div>

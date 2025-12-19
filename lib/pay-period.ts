@@ -1,21 +1,14 @@
-import { ProcessedSession, DayData, PayPeriodStats } from './types';
-import { startOfDay, endOfDay, addDays, differenceInDays, getDay } from 'date-fns';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { ProcessedSession, DayData, PayPeriodStats } from "./types";
+import { startOfDay, endOfDay, addDays, differenceInDays, getDay } from "date-fns";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
-const TIMEZONE = 'America/Vancouver';
+const TIMEZONE = "America/Vancouver";
 
-export function calculatePayPeriodStats(
-  startDate: Date,
-  endDate: Date,
-  sessions: ProcessedSession[]
-): PayPeriodStats {
-  const totalMinutes = sessions.reduce(
-    (sum, s) => sum + (s.duration_minutes || 0),
-    0
-  );
+export function calculatePayPeriodStats(startDate: Date, endDate: Date, sessions: ProcessedSession[]): PayPeriodStats {
+  const totalMinutes = sessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
 
   // Calculate potential hours
-  // Count number of working days (Tue-Sat) in range
+  // Count number of working days (Mon–Fri) in range
   let potentialMinutes = 0;
   let current = new Date(startDate);
   const end = new Date(endDate);
@@ -24,8 +17,8 @@ export function calculatePayPeriodStats(
     // Convert to zoned time to check the day of week in Vancouver
     const zonedCurrent = toZonedTime(current, TIMEZONE);
     const dayOfWeek = getDay(zonedCurrent);
-    // Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
-    if ([2, 3, 4, 5, 6].includes(dayOfWeek)) {
+    // Mon=1 ... Fri=5
+    if ([1, 2, 3, 4, 5].includes(dayOfWeek)) {
       potentialMinutes += 8 * 60; // Assuming 8 hour shifts
     }
     current = addDays(current, 1);
@@ -40,11 +33,7 @@ export function calculatePayPeriodStats(
   };
 }
 
-export function organizeSessionsByDay(
-  startDate: Date,
-  endDate: Date,
-  sessions: ProcessedSession[]
-): DayData[] {
+export function organizeSessionsByDay(startDate: Date, endDate: Date, sessions: ProcessedSession[]): DayData[] {
   // Create a map of date -> list of sessions
   const sessionsMap = new Map<string, ProcessedSession[]>();
 
@@ -54,7 +43,7 @@ export function organizeSessionsByDay(
     const zonedStartOfDay = startOfDay(zonedDate);
     // Convert back to UTC to use as key (matches the 'current' iterator which is also UTC-aligned to PST start)
     const dateKey = fromZonedTime(zonedStartOfDay, TIMEZONE).toISOString();
-    
+
     if (!sessionsMap.has(dateKey)) {
       sessionsMap.set(dateKey, []);
     }
@@ -82,10 +71,7 @@ export function organizeSessionsByDay(
     const morning = daySessions[0] || null;
     const afternoon = daySessions[1] || null;
 
-    const totalMinutes = daySessions.reduce(
-      (sum, s) => sum + s.duration_minutes,
-      0
-    );
+    const totalMinutes = daySessions.reduce((sum, s) => sum + s.duration_minutes, 0);
 
     daysData.push({
       date: new Date(current),

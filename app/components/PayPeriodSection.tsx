@@ -7,6 +7,7 @@ import SessionList from "./SessionList";
 import LiveTotal from "./LiveTotal";
 import LiveDifference from "./LiveDifference";
 import { formatTime, formatDate, formatLongDate, formatDecimalHours } from "@/lib/time-utils";
+import { toZonedTime } from "date-fns-tz";
 import { DayData, ProcessedSession } from "@/lib/types";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -71,7 +72,7 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
-    
+
     // -- Header Config --
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 14;
@@ -80,12 +81,12 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
     // Title / Header
     doc.setFontSize(18);
     doc.text("Timesheet Report", margin, yPos);
-    
+
     doc.setFontSize(10);
     doc.text(`Period: ${formatDate(period.start)} - ${formatDate(period.end)}`, pageWidth - margin, yPos, { align: "right" });
-    
+
     yPos += 10;
-    
+
     // Employee Info
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
@@ -100,11 +101,11 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
     // -- Table Data Preparation --
     // Columns: Day | Morning In | Morning Out | Afternoon In | Afternoon Out | Total
     const tableBody: any[] = [];
-    
+
     days.forEach((day) => {
       const dateStr = formatDate(day.date);
       const sessions = day.sessions;
-      
+
       // If no sessions, add empty row
       if (sessions.length === 0) {
         tableBody.push([dateStr, "", "", "", "", "0:00:00"]);
@@ -116,13 +117,13 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
       for (let i = 0; i < sessions.length; i += 2) {
         const isContinuation = i > 0;
         const rowLabel = isContinuation ? `${dateStr} [cont]` : dateStr;
-        
+
         const session1 = sessions[i];
         const session2 = sessions[i + 1]; // might be undefined
 
         // Helper to format time or empty
-        const fmt = (d: Date | null) => d ? formatTime(d) : "";
-        
+        const fmt = (d: Date | null) => (d ? formatTime(d) : "");
+
         // Helper for duration H:MM:00
         const fmtDuration = (mins: number) => {
           const hours = Math.floor(mins / 60);
@@ -133,17 +134,10 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
         // Calculate row total
         let rowTotalMinutes = session1.duration_minutes;
         if (session2) rowTotalMinutes += session2.duration_minutes;
-        
+
         const rowTotalStr = fmtDuration(rowTotalMinutes);
 
-        tableBody.push([
-          rowLabel,
-          fmt(session1.punch_in),
-          fmt(session1.punch_out),
-          session2 ? fmt(session2.punch_in) : "",
-          session2 ? fmt(session2.punch_out) : "",
-          rowTotalStr
-        ]);
+        tableBody.push([rowLabel, fmt(session1.punch_in), fmt(session1.punch_out), session2 ? fmt(session2.punch_in) : "", session2 ? fmt(session2.punch_out) : "", rowTotalStr]);
       }
     });
 
@@ -156,7 +150,7 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
 
     tableBody.push([
       { content: "Grand Total", colSpan: 5, styles: { fontStyle: "bold", halign: "right" } },
-      { content: grandTotalStr, styles: { fontStyle: "bold", halign: "right" } }
+      { content: grandTotalStr, styles: { fontStyle: "bold", halign: "right" } },
     ]);
 
     // -- Generate Table --
@@ -214,7 +208,9 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
       <div className="p-6 mb-6 rounded-3xl border border-white/20 bg-white/5 backdrop-blur-xl shadow-2xl">
         <div className="flex-between mb-4 border-b border-white/20 pb-3">
           <h2 className="text-white">Pay Period Stats</h2>
-          <button className="btn-sm-primary" onClick={handleExportPDF}>Export PDF</button>
+          <button className="btn-sm-primary" onClick={handleExportPDF}>
+            Export PDF
+          </button>
         </div>
 
         <PayPeriodNavigator initialPeriod={period} isCurrentPeriod={isCurrent} onPeriodChange={handlePeriodChange} />
@@ -249,7 +245,9 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
       <div className="p-6 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
         <div className="flex-between mb-4 border-b border-white/10 pb-3">
           <h2 className="text-white">Pay Period Summary</h2>
-          <button className="btn-sm-primary" onClick={handleExportPDF}>Export PDF</button>
+          <button className="btn-sm-primary" onClick={handleExportPDF}>
+            Export PDF
+          </button>
         </div>
 
         {loading ? (
@@ -264,6 +262,7 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
                   <th className="text-left py-3 px-4 text-sm font-semibold text-accent-blue">Day</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-accent-blue">Sessions</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-accent-blue">Total</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-accent-blue">Delta vs 8h</th>
                   <th className="w-10"></th>
                 </tr>
               </thead>
@@ -271,6 +270,13 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
                 {days.map((day, idx) => {
                   const dateStr = formatDate(new Date(day.date));
                   const totalHours = formatDecimalHours(day.total_minutes / 60);
+                  const TIMEZONE = "America/Vancouver";
+                  const dayZoned = toZonedTime(new Date(day.date), TIMEZONE);
+                  // Mon–Fri are workdays: 1=Mon ... 5=Fri in JS
+                  const isWorkDay = [1, 2, 3, 4, 5].includes(dayZoned.getDay());
+                  const deltaMinutes = isWorkDay ? day.total_minutes - 8 * 60 : null;
+                  const deltaStr = deltaMinutes === null ? "-" : formatDecimalHours((deltaMinutes as number) / 60);
+                  const deltaClass = deltaMinutes === null ? "text-white/60" : (deltaMinutes as number) >= 0 ? "text-accent-green" : "text-accent-red";
 
                   return (
                     <tr key={idx} className="border-b border-white/5 hover:bg-white/10 group cursor-pointer" onClick={() => setSelectedDay(day)}>
@@ -289,6 +295,7 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
                         )}
                       </td>
                       <td className="py-3 px-4 text-sm text-white text-right">{totalHours}</td>
+                      <td className={`py-3 px-4 text-sm text-right ${deltaClass}`}>{deltaStr}</td>
                       <td className="py-3 px-4 text-right">
                         <button
                           className="text-(--color-primary) hover:opacity-80 text-sm font-medium transition-opacity opacity-0 group-hover:opacity-100"
