@@ -279,8 +279,7 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
                   const totalHours = formatDecimalHours(day.total_minutes / 60);
                   const TIMEZONE = "America/Vancouver";
                   const dayZoned = toZonedTime(new Date(day.date), TIMEZONE);
-                  // Tue–Sat are workdays: 2=Tue ... 6=Sat
-                  const isWorkDay = [2, 3, 4, 5, 6].includes(dayZoned.getDay());
+                  const isWorkDay = [1, 2, 3, 4, 5].includes(dayZoned.getDay());
                   const deltaMinutes = isWorkDay ? day.total_minutes - 8 * 60 : day.total_minutes;
                   const showDash = !isWorkDay && day.total_minutes === 0;
                   const deltaStr = showDash ? "-" : formatDecimalHours(deltaMinutes / 60);
