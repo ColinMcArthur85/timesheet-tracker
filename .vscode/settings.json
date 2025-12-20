@@ -1,0 +1,22 @@
+{
+  // Suppress CSS validator warnings for Tailwind v4 directives
+  "css.lint.unknownAtRules": "ignore",
+
+  // Optional: disable built-in CSS validation entirely (Tailwind handles processing)
+  // "css.validate": false,
+
+  // Tailwind CSS IntelliSense enhancements
+  "tailwindCSS.includeLanguages": {
+    "plaintext": "html",
+    "typescript": "javascript",
+    "typescriptreact": "javascript",
+    "javascript": "javascript",
+    "javascriptreact": "javascript"
+  },
+  "tailwindCSS.emmetCompletions": true,
+  "tailwindCSS.experimental.classRegex": [
+    // Common patterns; keep if you later add utility class wrappers
+    "tw\\(([^)]*)\\)",
+    "cn\\(([^)]*)\\)"
+  ]
+}
