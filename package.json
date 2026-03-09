@@ -18,7 +18,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "jspdf": "^3.0.4",
+    "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.2",
     "next": "^16.0.7",
     "react": "^19.2.1",
@@ -35,6 +35,6 @@
     "eslint-config-next": "^16.0.7",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vercel": "^25.2.0"
+    "vercel": "^50.28.0"
   }
 }

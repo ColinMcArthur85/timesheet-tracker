@@ -21,7 +21,12 @@ export function calculatePayPeriodStats(startDate: Date, endDate: Date, sessions
     if ([1, 2, 3, 4, 5].includes(dayOfWeek)) {
       potentialMinutes += 8 * 60; // Assuming 8 hour shifts
     }
-    current = addDays(current, 1);
+    
+    // Move to next day and re-align to start of day in Vancouver to handle DST shifts
+    const nextDay = addDays(current, 1);
+    const zonedNext = toZonedTime(nextDay, TIMEZONE);
+    zonedNext.setHours(0, 0, 0, 0);
+    current = fromZonedTime(zonedNext, TIMEZONE);
   }
 
   return {
@@ -38,11 +43,9 @@ export function organizeSessionsByDay(startDate: Date, endDate: Date, sessions: 
   const sessionsMap = new Map<string, ProcessedSession[]>();
 
   for (const s of sessions) {
-    // Convert session date to Vancouver time to find which day it belongs to
+    // Convert session date to Vancouver time and format as YYYY-MM-DD for grouping
     const zonedDate = toZonedTime(new Date(s.date), TIMEZONE);
-    const zonedStartOfDay = startOfDay(zonedDate);
-    // Convert back to UTC to use as key (matches the 'current' iterator which is also UTC-aligned to PST start)
-    const dateKey = fromZonedTime(zonedStartOfDay, TIMEZONE).toISOString();
+    const dateKey = zonedDate.toISOString().split('T')[0];
 
     if (!sessionsMap.has(dateKey)) {
       sessionsMap.set(dateKey, []);
@@ -55,9 +58,10 @@ export function organizeSessionsByDay(startDate: Date, endDate: Date, sessions: 
   const end = new Date(endDate);
 
   while (current <= end) {
-    // current is already aligned to start of day in PST (but as UTC timestamp)
-    // e.g. 08:00 UTC.
-    const dateKey = current.toISOString();
+    // Use the same YYYY-MM-DD key for retrieving grouped sessions
+    // Ensure 'current' is correctly interpreted in Vancouver time for the key
+    const zonedCurrent = toZonedTime(current, TIMEZONE);
+    const dateKey = zonedCurrent.toISOString().split('T')[0];
     const daySessions = sessionsMap.get(dateKey) || [];
 
     // Sort by punch_in time
@@ -81,7 +85,11 @@ export function organizeSessionsByDay(startDate: Date, endDate: Date, sessions: 
       sessions: daySessions,
     });
 
-    current = addDays(current, 1);
+    // Move to next day and re-align to start of day in Vancouver to handle DST shifts
+    const nextDay = addDays(current, 1);
+    const zonedNext = toZonedTime(nextDay, TIMEZONE);
+    zonedNext.setHours(0, 0, 0, 0);
+    current = fromZonedTime(zonedNext, TIMEZONE);
   }
 
   return daysData;
