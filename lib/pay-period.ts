@@ -39,14 +39,14 @@ export function calculatePayPeriodStats(startDate: Date, endDate: Date, sessions
 }
 
 export function organizeSessionsByDay(startDate: Date, endDate: Date, sessions: ProcessedSession[]): DayData[] {
-  // Create a map of date -> list of sessions
   const sessionsMap = new Map<string, ProcessedSession[]>();
+  const getDateKey = (d: Date) => {
+    const zoned = toZonedTime(new Date(d), TIMEZONE);
+    return `${zoned.getFullYear()}-${(zoned.getMonth() + 1).toString().padStart(2, '0')}-${zoned.getDate().toString().padStart(2, '0')}`;
+  };
 
   for (const s of sessions) {
-    // Convert session date to Vancouver time and format as YYYY-MM-DD for grouping
-    const zonedDate = toZonedTime(new Date(s.date), TIMEZONE);
-    const dateKey = zonedDate.toISOString().split('T')[0];
-
+    const dateKey = getDateKey(s.date);
     if (!sessionsMap.has(dateKey)) {
       sessionsMap.set(dateKey, []);
     }
@@ -58,10 +58,7 @@ export function organizeSessionsByDay(startDate: Date, endDate: Date, sessions: 
   const end = new Date(endDate);
 
   while (current <= end) {
-    // Use the same YYYY-MM-DD key for retrieving grouped sessions
-    // Ensure 'current' is correctly interpreted in Vancouver time for the key
-    const zonedCurrent = toZonedTime(current, TIMEZONE);
-    const dateKey = zonedCurrent.toISOString().split('T')[0];
+    const dateKey = getDateKey(current);
     const daySessions = sessionsMap.get(dateKey) || [];
 
     // Sort by punch_in time
