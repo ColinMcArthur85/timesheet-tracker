@@ -82,16 +82,27 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
   const handleExportPDF = async () => {
     const doc = new jsPDF();
 
-    // Fetch current bank transactions for running tally
-    let bankSummary = { balance_hours: 0, currentPeriodWithdrawals: 0 };
+    // Fetch current bank transactions for running tally & current period net adjustment
+    let bankSummary = { balance_hours: 0, currentPeriodWithdrawals: 0, currentPeriodDeposits: 0, netAdjustment: 0 };
     try {
       const bankRes = await fetch("/api/bank");
       if (bankRes.ok) {
         const bankData = await bankRes.json();
         bankSummary.balance_hours = bankData.balance_hours || 0;
-        bankSummary.currentPeriodWithdrawals = (bankData.transactions || [])
-          .filter((tx: any) => tx.type === "WITHDRAW" && tx.pay_period_start && new Date(tx.pay_period_start).toDateString() === new Date(period.start).toDateString())
+        
+        const periodTxs = (bankData.transactions || []).filter(
+          (tx: any) => tx.pay_period_start && new Date(tx.pay_period_start).toDateString() === new Date(period.start).toDateString()
+        );
+
+        bankSummary.currentPeriodWithdrawals = periodTxs
+          .filter((tx: any) => tx.type === "WITHDRAW")
           .reduce((sum: number, tx: any) => sum + Number(tx.amount_hours), 0);
+
+        bankSummary.currentPeriodDeposits = periodTxs
+          .filter((tx: any) => tx.type === "BANK")
+          .reduce((sum: number, tx: any) => sum + Number(tx.amount_hours), 0);
+
+        bankSummary.netAdjustment = bankSummary.currentPeriodWithdrawals - bankSummary.currentPeriodDeposits;
       }
     } catch (err) {
       console.error("Failed to fetch bank data for PDF:", err);
@@ -124,10 +135,13 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
     doc.text(`Banked Hours Pool Tally: ${formatDecimalHours(bankSummary.balance_hours)}`, pageWidth - margin, yPos + 5, { align: "right" });
-    if (bankSummary.currentPeriodWithdrawals > 0) {
+    if (bankSummary.netAdjustment !== 0) {
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(34, 139, 34); // Forest green highlight
-      doc.text(`* Includes ${formatDecimalHours(bankSummary.currentPeriodWithdrawals)} Banked Hours Claimed`, pageWidth - margin, yPos + 10, { align: "right" });
+      doc.setTextColor(bankSummary.netAdjustment > 0 ? 34 : 217, bankSummary.netAdjustment > 0 ? 139 : 119, bankSummary.netAdjustment > 0 ? 34 : 6);
+      const adjText = bankSummary.netAdjustment > 0
+        ? `* Includes ${formatDecimalHours(bankSummary.netAdjustment)} Banked Hours Claimed`
+        : `* ${formatDecimalHours(Math.abs(bankSummary.netAdjustment))} Banked (Deducted for Overflow)`;
+      doc.text(adjText, pageWidth - margin, yPos + 10, { align: "right" });
       doc.setTextColor(0, 0, 0);
     }
 
@@ -177,43 +191,45 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
     });
 
     // Add Worked Hours Subtotal
-    const totalMinutes = stats.total_hours * 60;
-    const hours = Math.floor(totalMinutes / 60);
-    const m = Math.round(totalMinutes % 60);
-    const workedHoursStr = `${hours}:${m.toString().padStart(2, "0")}:00`;
+    const workedMinutes = closedPeriodMinutes;
+    const wH = Math.floor(workedMinutes / 60);
+    const wM = Math.round(workedMinutes % 60);
+    const workedHoursStr = `${wH}:${wM.toString().padStart(2, "0")}:00`;
 
     tableBody.push([
       { content: "Worked Hours Subtotal", colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const } },
       { content: workedHoursStr, styles: { fontStyle: "bold" as const, halign: "right" as const } },
     ]);
 
-    // Add Banked Hours Claimed row if applicable
-    if (bankSummary.currentPeriodWithdrawals > 0) {
-      const bankMins = bankSummary.currentPeriodWithdrawals * 60;
-      const bH = Math.floor(bankMins / 60);
-      const bM = Math.round(bankMins % 60);
-      const bankClaimedStr = `${bH}:${bM.toString().padStart(2, "0")}:00`;
+    // Add Banked Hours Adjustment row if applicable
+    if (bankSummary.netAdjustment !== 0) {
+      const absMins = Math.abs(bankSummary.netAdjustment) * 60;
+      const bH = Math.floor(absMins / 60);
+      const bM = Math.round(absMins % 60);
+      const formattedAdjStr = `${bankSummary.netAdjustment < 0 ? "-" : "+"}${bH}:${bM.toString().padStart(2, "0")}:00`;
+      const labelStr = bankSummary.netAdjustment < 0 ? "Banked Hours Overflow (Deducted)" : "Banked Hours Claimed (Applied)";
 
       tableBody.push([
-        { content: "Banked Hours Claimed (Applied)", colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const } },
-        { content: bankClaimedStr, styles: { fontStyle: "bold" as const, halign: "right" as const } },
+        { content: labelStr, colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const } },
+        { content: formattedAdjStr, styles: { fontStyle: "bold" as const, halign: "right" as const } },
       ]);
 
-      const grandTotalMins = totalMinutes + bankMins;
+      const grandTotalMins = workedMinutes + (bankSummary.netAdjustment * 60);
       const gtH = Math.floor(grandTotalMins / 60);
       const gtM = Math.round(grandTotalMins % 60);
       const grandTotalStr = `${gtH}:${gtM.toString().padStart(2, "0")}:00`;
 
       tableBody.push([
-        { content: "Total Payable Hours (Worked + Banked)", colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const } },
+        { content: "Total Payable Hours (Invoice Amount)", colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const } },
         { content: grandTotalStr, styles: { fontStyle: "bold" as const, halign: "right" as const } },
       ]);
     } else {
       tableBody.push([
-        { content: "Grand Total", colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const } },
+        { content: "Total Payable Hours (Invoice Amount)", colSpan: 5, styles: { fontStyle: "bold" as const, halign: "right" as const } },
         { content: workedHoursStr, styles: { fontStyle: "bold" as const, halign: "right" as const } },
       ]);
     }
+
 
     // -- Generate Table --
     autoTable(doc, {
