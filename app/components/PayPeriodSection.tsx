@@ -256,18 +256,23 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
   }, 0);
 
   const [bankRefreshKey, setBankRefreshKey] = useState(0);
-  const [bankedHoursApplied, setBankedHoursApplied] = useState(0);
+  const [bankedNetHours, setBankedNetHours] = useState(0);
 
-  // Fetch banked hours applied to current pay period whenever period changes
+  // Fetch banked hours transactions for current pay period whenever period changes
   const fetchCurrentPeriodBanked = async () => {
     try {
       const res = await fetch("/api/bank");
       if (res.ok) {
         const data = await res.json();
-        const applied = (data.transactions || [])
-          .filter((tx: any) => tx.type === "WITHDRAW" && tx.pay_period_start && new Date(tx.pay_period_start).toDateString() === new Date(period.start).toDateString())
-          .reduce((sum: number, tx: any) => sum + Number(tx.amount_hours), 0);
-        setBankedHoursApplied(applied);
+        // Sum withdrawals (+ hours) and deposits (- hours) for this specific pay period
+        const net = (data.transactions || []).reduce((acc: number, tx: any) => {
+          if (tx.pay_period_start && new Date(tx.pay_period_start).toDateString() === new Date(period.start).toDateString()) {
+            const amount = Number(tx.amount_hours);
+            return tx.type === "WITHDRAW" ? acc + amount : acc - amount;
+          }
+          return acc;
+        }, 0);
+        setBankedNetHours(net);
       }
     } catch (err) {
       console.error("Failed to fetch period banked hours:", err);
@@ -278,8 +283,8 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
     fetchCurrentPeriodBanked();
   }, [period, bankRefreshKey]);
 
-  // Total payable minutes = worked minutes + (banked hours applied * 60)
-  const totalPayableMinutes = closedPeriodMinutes + bankedHoursApplied * 60;
+  // Total payable minutes = worked minutes + (net banked adjustment * 60)
+  const totalPayableMinutes = closedPeriodMinutes + bankedNetHours * 60;
 
   // Find open session start time
   let openSessionStart = null;

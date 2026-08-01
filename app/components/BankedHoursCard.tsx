@@ -358,14 +358,36 @@ export default function BankedHoursCard({ currentPayPeriodStart, payPeriodHours,
         </button>
       </div>
 
-      {currentPeriodWithdrawals > 0 && (
-        <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
-          <FontAwesomeIcon icon={faCoins} className="text-emerald-400" />
-          <span>
-            <strong>{formatDecimalHours(currentPeriodWithdrawals)}</strong> applied to the current pay period.
-          </span>
-        </div>
-      )}
+      {/* Net Banked Adjustment Banner for Current Pay Period */}
+      {(() => {
+        const periodTransactions = bankData.transactions.filter(
+          (tx) => currentPayPeriodStart && tx.pay_period_start && new Date(tx.pay_period_start).toDateString() === new Date(currentPayPeriodStart).toDateString()
+        );
+        const netAdjustment = periodTransactions.reduce((acc, tx) => {
+          const amt = Number(tx.amount_hours);
+          return tx.type === "WITHDRAW" ? acc + amt : acc - amt;
+        }, 0);
+
+        if (netAdjustment === 0) return null;
+
+        return (
+          <div className={`mt-4 p-3 rounded-xl border text-xs flex items-center gap-2 ${netAdjustment > 0 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300" : "bg-amber-500/10 border-amber-500/20 text-amber-300"}`}>
+            <FontAwesomeIcon icon={faCoins} className={netAdjustment > 0 ? "text-emerald-400" : "text-amber-400"} />
+            <span>
+              {netAdjustment > 0 ? (
+                <>
+                  <strong>{formatDecimalHours(netAdjustment)}</strong> claimed from bank and applied to this pay period (Payable Total: 80h).
+                </>
+              ) : (
+                <>
+                  <strong>{formatDecimalHours(Math.abs(netAdjustment))}</strong> banked from this pay period (Payable Total: 80h).
+                </>
+              )}
+            </span>
+          </div>
+        );
+      })()}
+
 
       {modalJSX}
     </div>
