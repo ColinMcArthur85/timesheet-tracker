@@ -255,6 +255,32 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
     return total + dayClosed;
   }, 0);
 
+  const [bankRefreshKey, setBankRefreshKey] = useState(0);
+  const [bankedHoursApplied, setBankedHoursApplied] = useState(0);
+
+  // Fetch banked hours applied to current pay period whenever period changes
+  const fetchCurrentPeriodBanked = async () => {
+    try {
+      const res = await fetch("/api/bank");
+      if (res.ok) {
+        const data = await res.json();
+        const applied = (data.transactions || [])
+          .filter((tx: any) => tx.type === "WITHDRAW" && tx.pay_period_start && new Date(tx.pay_period_start).toDateString() === new Date(period.start).toDateString())
+          .reduce((sum: number, tx: any) => sum + Number(tx.amount_hours), 0);
+        setBankedHoursApplied(applied);
+      }
+    } catch (err) {
+      console.error("Failed to fetch period banked hours:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentPeriodBanked();
+  }, [period, bankRefreshKey]);
+
+  // Total payable minutes = worked minutes + (banked hours applied * 60)
+  const totalPayableMinutes = closedPeriodMinutes + bankedHoursApplied * 60;
+
   // Find open session start time
   let openSessionStart = null;
   for (const day of days) {
@@ -265,7 +291,8 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
     }
   }
 
-  const [bankRefreshKey, setBankRefreshKey] = useState(0);
+
+
 
   return (
     <>
@@ -296,7 +323,7 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-lg p-4 text-center border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl">
               <div className="text-3xl font-bold text-white">
-                <LiveTotal baseMinutes={closedPeriodMinutes} startTime={openSessionStart} />
+                <LiveTotal baseMinutes={totalPayableMinutes} startTime={openSessionStart} />
               </div>
               <div className="text-sm text-white/70 mt-1">Total Hours</div>
             </div>
@@ -307,7 +334,7 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
             <div className="rounded-lg p-4 text-center border border-white/10 bg-white/5 backdrop-blur-lg shadow-xl flex flex-col justify-between items-center">
               <div>
                 <div className={stats.difference < 0 ? "text-accent-red text-3xl font-bold" : "text-accent-green text-3xl font-bold"}>
-                  <LiveDifference baseMinutes={closedPeriodMinutes} potentialMinutes={stats.potential_hours * 60} startTime={openSessionStart} />
+                  <LiveDifference baseMinutes={totalPayableMinutes} potentialMinutes={stats.potential_hours * 60} startTime={openSessionStart} />
                 </div>
                 <div className="text-sm text-white/70 mt-1">Difference</div>
               </div>
@@ -342,10 +369,9 @@ export default function PayPeriodSection({ initialPeriod, initialStats, initialD
                 </button>
               )}
             </div>
-
-
           </div>
         )}
+
       </div>
 
       {/* Pay Period Summary */}
