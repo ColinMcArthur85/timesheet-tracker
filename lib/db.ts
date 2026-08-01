@@ -108,6 +108,96 @@ export async function deletePunchEvent(slackEventId: string) {
   return result.rows[0];
 }
 
+// --- Banked Hours Management ---
+
+let demoBankTransactions: Array<{
+  id: number;
+  user_id: string;
+  amount_hours: number;
+  type: "BANK" | "WITHDRAW";
+  pay_period_start?: string | null;
+  notes?: string | null;
+  created_at: string;
+}> = [
+  {
+    id: 1,
+    user_id: "demo-user",
+    amount_hours: 12.5,
+    type: "BANK",
+    pay_period_start: null,
+    notes: "Banked extra hours from previous pay period",
+    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
+  },
+];
+
+export async function getBankTransactions(userId = "default") {
+  if (await isDemoMode()) {
+    return demoBankTransactions;
+  }
+
+  try {
+    await initDatabase();
+    const result = await sql`
+      SELECT * FROM bank_transactions
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+    `;
+    return result.rows;
+  } catch (error) {
+    console.error("Error fetching bank transactions:", error);
+    return [];
+  }
+}
+
+export async function createBankTransaction(
+  userId: string,
+  amountHours: number,
+  type: "BANK" | "WITHDRAW",
+  payPeriodStart?: string | null,
+  notes?: string | null
+) {
+  if (await isDemoMode()) {
+    const newTx = {
+      id: Date.now(),
+      user_id: userId,
+      amount_hours: Number(amountHours),
+      type,
+      pay_period_start: payPeriodStart || null,
+      notes: notes || null,
+      created_at: new Date().toISOString(),
+    };
+    demoBankTransactions.unshift(newTx);
+    return newTx;
+  }
+
+  await initDatabase();
+  const result = await sql`
+    INSERT INTO bank_transactions (user_id, amount_hours, type, pay_period_start, notes)
+    VALUES (${userId}, ${amountHours}, ${type}, ${payPeriodStart || null}, ${notes || null})
+    RETURNING *
+  `;
+  return result.rows[0];
+}
+
+export async function deleteBankTransaction(id: number) {
+  if (await isDemoMode()) {
+    const index = demoBankTransactions.findIndex((t) => t.id === id);
+    if (index !== -1) {
+      const removed = demoBankTransactions[index];
+      demoBankTransactions.splice(index, 1);
+      return removed;
+    }
+    return null;
+  }
+
+  const result = await sql`
+    DELETE FROM bank_transactions
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return result.rows[0];
+}
+
 // --- Manual Punch Management ---
 
 export async function updatePunchById(id: number, timestamp: Date) {

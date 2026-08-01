@@ -56,3 +56,19 @@ export interface SlackEvent {
   };
   challenge?: string;
 }
+
+export interface BankTransaction {
+  id: number;
+  user_id: string;
+  amount_hours: number;
+  type: "BANK" | "WITHDRAW";
+  pay_period_start?: string | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface BankSummary {
+  balance_hours: number;
+  transactions: BankTransaction[];
+}
+

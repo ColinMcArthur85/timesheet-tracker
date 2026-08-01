@@ -25,3 +25,18 @@ CREATE TABLE IF NOT EXISTS work_sessions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_work_sessions_date ON work_sessions(date DESC);
+
+-- Create bank_transactions table
+CREATE TABLE IF NOT EXISTS bank_transactions (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  amount_hours NUMERIC(6,2) NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('BANK', 'WITHDRAW')),
+  pay_period_start TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_user_id ON bank_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_created_at ON bank_transactions(created_at DESC);
+
