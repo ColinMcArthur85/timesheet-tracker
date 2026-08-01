@@ -41,12 +41,26 @@ export async function initDatabase() {
       ON punch_events(user_id)
     `;
 
+    // Create bank_transactions table
+    await sql`
+      CREATE TABLE IF NOT EXISTS bank_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        amount_hours NUMERIC(6,2) NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('BANK', 'WITHDRAW')),
+        pay_period_start TIMESTAMPTZ,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `;
+
     console.log("✅ Database initialized successfully");
   } catch (error) {
     console.error("❌ Database initialization error:", error);
     throw error;
   }
 }
+
 
 export async function getPunchEventsByDateRange(start: Date, end: Date) {
   if (await isDemoMode()) {

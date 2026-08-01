@@ -67,11 +67,12 @@ export async function POST(request: NextRequest) {
       balance_hours,
       transactions: updatedTransactions,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in POST /api/bank:", error);
-    return NextResponse.json({ error: "Failed to process bank transaction" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Failed to process bank transaction" }, { status: 500 });
   }
 }
+
 
 export async function DELETE(request: NextRequest) {
   try {
